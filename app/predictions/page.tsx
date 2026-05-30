@@ -1,29 +1,47 @@
 'use client';
 
 import { useState } from 'react';
-import Topbar from '@/components/Topbar';
-import { DISTRICT_RISK_SCORES, MONTHLY_CRIME_TRENDS, RISK_FORECAST, KARNATAKA_DISTRICTS } from '@/lib/mockData';
 import {
-  AreaChart, Area, BarChart, Bar, ComposedChart, Line, XAxis, YAxis,
-  Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Cell, Legend
+  AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, Legend, ReferenceLine,
 } from 'recharts';
-import { TrendingUp, AlertTriangle, Shield, Target, Cpu, ChevronUp, ChevronDown } from 'lucide-react';
+import {
+  TrendingUp, AlertTriangle, Brain, Target, Calendar,
+  ChevronUp, ChevronDown, Minus, MapPin, Zap,
+} from 'lucide-react';
+import { RISK_FORECAST, DISTRICT_RISK_SCORES, MONTHLY_CRIME_TRENDS } from '@/lib/mockData';
 
-const combinedData = [
-  ...MONTHLY_CRIME_TRENDS.slice(-6).map(d => ({ ...d, type: 'actual' })),
-  ...RISK_FORECAST.map(d => ({ month: d.month, crimes: d.predicted, predicted: d.predicted, low: d.low, high: d.high, confidence: d.confidence, type: 'forecast' })),
-];
+// Merge historical + forecast data for the chart
+const historicalData = MONTHLY_CRIME_TRENDS.map(d => ({
+  month: d.month,
+  actual: d.crimes,
+  predicted: null as number | null,
+  low: null as number | null,
+  high: null as number | null,
+  type: 'historical',
+}));
+const forecastData = RISK_FORECAST.map(d => ({
+  month: d.month,
+  actual: null as number | null,
+  predicted: d.predicted,
+  low: d.low,
+  high: d.high,
+  type: 'forecast',
+}));
+const combinedData = [...historicalData, ...forecastData];
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
-    const isForecast = payload[0]?.payload?.type === 'forecast';
     return (
       <div className="tooltip">
-        <p className="font-bold mb-1" style={{ color: isForecast ? '#8b5cf6' : '#00f0ff', fontSize: '11px' }}>
-          {label} {isForecast ? '(AI Forecast)' : '(Actual)'}
-        </p>
-        {payload.map((p: any, i: number) => p.value && (
-          <p key={i} style={{ color: p.color || '#94a3b8', fontSize: '11px' }}>{p.name}: {p.value?.toLocaleString?.() ?? p.value}</p>
+        <div style={{ color: '#00f0ff', fontWeight: 700, marginBottom: 6 }}>{label}</div>
+        {payload.map((p: any, i: number) => p.value != null && (
+          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 2 }}>
+            <span style={{ color: '#94a3b8', fontSize: 12 }}>{p.name}:</span>
+            <span style={{ color: p.color || '#f1f5f9', fontWeight: 700, fontSize: 13 }}>
+              {typeof p.value === 'number' ? p.value.toLocaleString() : p.value}
+            </span>
+          </div>
         ))}
       </div>
     );
@@ -31,196 +49,332 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
+function getRiskColor(score: number): string {
+  if (score >= 85) return '#ef4444';
+  if (score >= 70) return '#f59e0b';
+  if (score >= 55) return '#eab308';
+  return '#00f0ff';
+}
+
+function getRiskBadgeClass(score: number): string {
+  if (score >= 85) return 'badge badge-red';
+  if (score >= 70) return 'badge badge-amber';
+  if (score >= 55) return 'badge';
+  return 'badge badge-cyan';
+}
+
+const topMetrics = [
+  {
+    label: 'Highest Risk District',
+    value: 'Bengaluru Urban',
+    sub: 'Risk Score: 94/100',
+    color: '#ef4444',
+    icon: MapPin,
+    bg: 'rgba(239,68,68,0.08)',
+    border: 'rgba(239,68,68,0.25)',
+  },
+  {
+    label: 'Predicted Peak',
+    value: 'Dec 2025',
+    sub: '13,600 projected crimes',
+    color: '#f59e0b',
+    icon: Calendar,
+    bg: 'rgba(245,158,11,0.08)',
+    border: 'rgba(245,158,11,0.25)',
+  },
+  {
+    label: 'Model Accuracy',
+    value: '91.2%',
+    sub: 'Q1 2025 — Validated',
+    color: '#10b981',
+    icon: Target,
+    bg: 'rgba(16,185,129,0.08)',
+    border: 'rgba(16,185,129,0.25)',
+  },
+  {
+    label: 'Next 30-Day Risk',
+    value: 'HIGH',
+    sub: 'Jul 2025 — 10,800 predicted',
+    color: '#f59e0b',
+    icon: AlertTriangle,
+    bg: 'rgba(245,158,11,0.08)',
+    border: 'rgba(245,158,11,0.25)',
+  },
+];
+
+const aiInsights = [
+  {
+    icon: Calendar,
+    color: '#ef4444',
+    border: 'rgba(239,68,68,0.3)',
+    bg: 'rgba(239,68,68,0.06)',
+    title: 'Festival Season Alert: Oct–Dec 2025',
+    desc: 'AI model projects a 28% crime spike during the Dasara-Diwali window (Oct–Dec 2025). Historical data from 2022–2024 confirms consistent festival-season surges in Mysuru, Bengaluru, and Belagavi districts.',
+    badge: '+28% Spike',
+    badgeClass: 'badge badge-red',
+  },
+  {
+    icon: TrendingUp,
+    color: '#00f0ff',
+    border: 'rgba(0,240,255,0.3)',
+    bg: 'rgba(0,240,255,0.05)',
+    title: 'Cybercrime Trajectory',
+    desc: 'AI projects a 34% annual increase in cybercrime if current trends continue unchecked. Bengaluru Urban remains the primary epicenter, with semi-urban districts seeing accelerating adoption.',
+    badge: '+34% Annual',
+    badgeClass: 'badge badge-cyan',
+  },
+  {
+    icon: AlertTriangle,
+    color: '#f59e0b',
+    border: 'rgba(245,158,11,0.3)',
+    bg: 'rgba(245,158,11,0.05)',
+    title: 'Northern Districts Risk Corridor',
+    desc: 'The Kalaburagi-Raichur corridor is showing accelerating crime rates, with 11.2% and 13.8% YoY increases respectively. Model identifies under-resourcing as the key risk amplifier in this region.',
+    badge: 'CRITICAL CORRIDOR',
+    badgeClass: 'badge badge-amber',
+  },
+];
+
 export default function PredictionsPage() {
-  const [selectedDistrict, setSelectedDistrict] = useState<string | null>(null);
-
-  const topRisk = KARNATAKA_DISTRICTS
-    .sort((a, b) => {
-      const riskOrder = { critical: 4, high: 3, medium: 2, low: 1 };
-      return riskOrder[b.riskLevel as keyof typeof riskOrder] - riskOrder[a.riskLevel as keyof typeof riskOrder] || b.change - a.change;
-    })
-    .slice(0, 8);
-
-  const forecastBarData = DISTRICT_RISK_SCORES.map(d => ({
-    name: d.name.split(' ')[0],
-    current: d.score,
-    predicted: Math.min(100, d.score + parseFloat(d.predictedIncrease) * 1.5),
-  }));
+  const [hoveredDistrict, setHoveredDistrict] = useState<string | null>(null);
 
   return (
-    <div className="min-h-screen">
-      <Topbar title="Risk Prediction Dashboard" subtitle="AI-powered crime forecasting and district risk assessment" />
-      <div className="p-6 space-y-6">
-
-        {/* Summary Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { label: 'Predicted Crimes (Jul)', value: '10,800', change: '+5.5%', color: '#ef4444', icon: AlertTriangle },
-            { label: 'AI Forecast Accuracy', value: '91.2%', change: '+2.1%', color: '#10b981', icon: Target },
-            { label: 'Critical Zones', value: '4', change: 'unchanged', color: '#f59e0b', icon: Shield },
-            { label: 'Model Confidence', value: '78%', change: 'High', color: '#8b5cf6', icon: Cpu },
-          ].map((item, i) => (
-            <div key={i} className="glass-card p-4" style={{ borderColor: `${item.color}22` }}>
-              <div className="flex items-center justify-between mb-3">
-                <item.icon size={16} style={{ color: item.color }} />
-                <span className="text-xs font-semibold" style={{ color: item.change.startsWith('+') ? '#ef4444' : item.change.startsWith('-') ? '#10b981' : '#64748b' }}>
-                  {item.change}
-                </span>
-              </div>
-              <div className="text-2xl font-black" style={{ color: item.color }}>{item.value}</div>
-              <div className="text-xs mt-1" style={{ color: '#475569' }}>{item.label}</div>
-            </div>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-          {/* Crime Forecast Chart */}
-          <div className="glass-card p-5">
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <h2 className="font-bold text-sm tracking-wide" style={{ color: '#e2e8f0' }}>CRIME TREND FORECAST</h2>
-                <p className="text-xs mt-0.5" style={{ color: '#475569' }}>Historical vs. AI-predicted crime trajectory</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1.5"><div className="w-3 h-0.5" style={{ background: '#00f0ff' }} /><span className="text-xs" style={{ color: '#475569' }}>Actual</span></div>
-                <div className="flex items-center gap-1.5"><div className="w-3 h-0.5 border-t-2 border-dashed" style={{ borderColor: '#8b5cf6' }} /><span className="text-xs" style={{ color: '#475569' }}>Forecast</span></div>
-              </div>
-            </div>
-            <ResponsiveContainer width="100%" height={260}>
-              <ComposedChart data={combinedData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="gradActual" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#00f0ff" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#00f0ff" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="gradForecast" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.25} />
-                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                <XAxis dataKey="month" tick={{ fill: '#475569', fontSize: 9 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#475569', fontSize: 9 }} axisLine={false} tickLine={false} />
-                <Tooltip content={<CustomTooltip />} />
-                <ReferenceLine x="Jan 25" stroke="rgba(255,255,255,0.1)" strokeDasharray="4 4" />
-                <ReferenceLine x="Jul 25" stroke="rgba(139,92,246,0.3)" strokeDasharray="4 4" label={{ value: 'FORECAST ▶', fill: '#8b5cf6', fontSize: 9, position: 'insideTopLeft' }} />
-                <Area type="monotone" dataKey="crimes" name="Total Crimes" stroke="#00f0ff" strokeWidth={2} fill="url(#gradActual)" />
-                <Area type="monotone" dataKey="predicted" name="AI Forecast" stroke="#8b5cf6" strokeWidth={2} strokeDasharray="6 3" fill="url(#gradForecast)" />
-              </ComposedChart>
-            </ResponsiveContainer>
+    <div className="page-content" style={{ padding: '28px' }}>
+      {/* PAGE HEADER */}
+      <div style={{ marginBottom: 28 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 8 }}>
+          <div style={{
+            width: 44, height: 44, borderRadius: 12,
+            background: 'rgba(0,240,255,0.1)', border: '1px solid rgba(0,240,255,0.3)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <TrendingUp size={22} color="#00f0ff" />
           </div>
+          <div>
+            <h1 className="page-title">Risk Prediction Intelligence</h1>
+            <p className="page-subtitle">AI-Powered Crime Forecasting — 2024–2025 Karnataka State Model</p>
+          </div>
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Brain size={14} color="#8b5cf6" />
+            <span style={{ color: '#8b5cf6', fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>AI FORECAST ACTIVE</span>
+          </div>
+        </div>
+      </div>
 
-          {/* Forecast Confidence by Month */}
-          <div className="glass-card p-5">
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <h2 className="font-bold text-sm tracking-wide" style={{ color: '#e2e8f0' }}>MONTHLY FORECAST DETAIL</h2>
-                <p className="text-xs mt-0.5" style={{ color: '#475569' }}>Jul – Dec 2025 predicted crime volumes</p>
+      {/* SECTION 1: TOP METRICS */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 28 }}>
+        {topMetrics.map((m) => {
+          const Icon = m.icon;
+          return (
+            <div key={m.label} className="glass-card" style={{
+              padding: 20, background: m.bg, border: `1px solid ${m.border}`,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                <Icon size={15} color={m.color} />
+                <span className="metric-label">{m.label}</span>
               </div>
+              <div className="metric-value" style={{ color: m.color, marginBottom: 4 }}>{m.value}</div>
+              <div style={{ fontSize: 12, color: '#94a3b8' }}>{m.sub}</div>
             </div>
-            <div className="space-y-3">
-              {RISK_FORECAST.map((item, i) => (
-                <div key={i} className="p-3 rounded-xl" style={{ background: 'rgba(15,23,42,0.4)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-bold" style={{ color: '#e2e8f0' }}>{item.month}</span>
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs" style={{ color: '#64748b' }}>Range: {item.low.toLocaleString()}–{item.high.toLocaleString()}</span>
-                      <span className="badge badge-purple">±{100 - item.confidence}%</span>
+          );
+        })}
+      </div>
+
+      {/* SECTION 2: FORECAST CHART */}
+      <div className="glass-card" style={{ padding: 24, marginBottom: 24 }}>
+        <div className="section-header" style={{ marginBottom: 20 }}>
+          <div className="section-header-line" />
+          <span className="section-title">Crime Volume Forecast — 2024–2025 with AI Prediction</span>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 16, alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ width: 20, height: 3, background: '#00f0ff', borderRadius: 2 }} />
+              <span style={{ fontSize: 11, color: '#94a3b8' }}>Historical</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ width: 20, height: 3, background: '#8b5cf6', borderRadius: 2, borderTop: '2px dashed #8b5cf6' }} />
+              <span style={{ fontSize: 11, color: '#94a3b8' }}>Predicted</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ width: 20, height: 8, background: 'rgba(139,92,246,0.2)', borderRadius: 2 }} />
+              <span style={{ fontSize: 11, color: '#94a3b8' }}>Confidence Band</span>
+            </div>
+          </div>
+        </div>
+        <ResponsiveContainer width="100%" height={380}>
+          <AreaChart data={combinedData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id="actualGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#00f0ff" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="#00f0ff" stopOpacity={0.02} />
+              </linearGradient>
+              <linearGradient id="predictGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.25} />
+                <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.02} />
+              </linearGradient>
+              <linearGradient id="bandGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.12} />
+                <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+            <XAxis dataKey="month" tick={{ fill: '#64748b', fontSize: 10 }} interval={1} angle={-30} textAnchor="end" height={50} />
+            <YAxis tick={{ fill: '#64748b', fontSize: 11 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+            <Tooltip content={<CustomTooltip />} />
+            <ReferenceLine
+              x="Jun 25"
+              stroke="rgba(245,158,11,0.7)"
+              strokeDasharray="6 3"
+              label={{ value: 'FORECAST →', position: 'insideTopRight', fill: '#f59e0b', fontSize: 10, fontWeight: 700 }}
+            />
+            <Area type="monotone" dataKey="high" stroke="none" fill="url(#bandGrad)" name="High Estimate" />
+            <Area type="monotone" dataKey="low" stroke="none" fill="#020617" name="Low Estimate" />
+            <Area
+              type="monotone" dataKey="actual" stroke="#00f0ff" strokeWidth={2.5}
+              fill="url(#actualGrad)" name="Actual Crimes" dot={false} activeDot={{ r: 5, fill: '#00f0ff' }}
+            />
+            <Area
+              type="monotone" dataKey="predicted" stroke="#8b5cf6" strokeWidth={2.5}
+              strokeDasharray="8 4" fill="url(#predictGrad)" name="Predicted Crimes"
+              dot={false} activeDot={{ r: 5, fill: '#8b5cf6' }}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* SECTION 3 + 4: DISTRICT RISK + CONFIDENCE TABLE */}
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20, marginBottom: 24 }}>
+        {/* DISTRICT RISK FORECAST */}
+        <div className="glass-card" style={{ padding: 24 }}>
+          <div className="section-header" style={{ marginBottom: 18 }}>
+            <div className="section-header-line" />
+            <span className="section-title">District Risk Forecast</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {DISTRICT_RISK_SCORES.map((d, i) => {
+              const color = getRiskColor(d.score);
+              const isPositive = d.predictedIncrease.startsWith('+');
+              return (
+                <div
+                  key={d.name}
+                  style={{ cursor: 'default' }}
+                  onMouseEnter={() => setHoveredDistrict(d.name)}
+                  onMouseLeave={() => setHoveredDistrict(null)}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                    <span style={{ fontSize: 12, color: '#64748b', fontWeight: 700, minWidth: 18 }}>#{i + 1}</span>
+                    <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: '#f1f5f9' }}>{d.name}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {isPositive ? <ChevronUp size={13} color="#ef4444" /> : <ChevronDown size={13} color="#10b981" />}
+                      <span style={{
+                        fontSize: 12, fontWeight: 700,
+                        color: isPositive ? '#f87171' : '#34d399',
+                      }}>
+                        {d.predictedIncrease}
+                      </span>
                     </div>
+                    <span className={getRiskBadgeClass(d.score)} style={
+                      d.score >= 55 && d.score < 70
+                        ? { background: 'rgba(234,179,8,0.15)', color: '#facc15', border: '1px solid rgba(234,179,8,0.35)' }
+                        : {}
+                    }>
+                      {d.score}
+                    </span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex-1 risk-bar-track">
-                      <div className="risk-bar-fill" style={{
-                        width: `${(item.predicted / 16000) * 100}%`,
-                        background: `linear-gradient(90deg, #8b5cf680, #8b5cf6)`,
-                      }} />
-                    </div>
-                    <span className="text-sm font-black" style={{ color: '#8b5cf6' }}>{item.predicted.toLocaleString()}</span>
-                    <span className="text-xs" style={{ color: '#475569' }}>predicted</span>
-                  </div>
-                  <div className="flex items-center gap-1 mt-1">
-                    <div className="text-xs" style={{ color: '#475569' }}>Confidence:</div>
-                    <div className="flex gap-0.5">
-                      {Array.from({ length: 10 }).map((_, j) => (
-                        <div key={j} className="w-3 h-1 rounded-sm" style={{ background: j < Math.round(item.confidence / 10) ? '#10b981' : 'rgba(255,255,255,0.08)' }} />
-                      ))}
-                    </div>
-                    <div className="text-xs font-bold" style={{ color: '#10b981' }}>{item.confidence}%</div>
+                  <div style={{ position: 'relative', height: 8, background: 'rgba(255,255,255,0.07)', borderRadius: 4, overflow: 'hidden' }}>
+                    <div style={{
+                      position: 'absolute', left: 0, top: 0, height: '100%',
+                      width: `${d.score}%`,
+                      background: `linear-gradient(90deg, ${color}cc, ${color})`,
+                      borderRadius: 4,
+                      boxShadow: hoveredDistrict === d.name ? `0 0 10px ${color}88` : 'none',
+                      transition: 'box-shadow 0.3s ease',
+                    }} />
                   </div>
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
         </div>
 
-        {/* District Risk Comparison */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-          {/* Bar Chart */}
-          <div className="glass-card p-5">
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <h2 className="font-bold text-sm tracking-wide" style={{ color: '#e2e8f0' }}>DISTRICT RISK SCORE FORECAST</h2>
-                <p className="text-xs mt-0.5" style={{ color: '#475569' }}>Current vs. predicted risk scores (next 90 days)</p>
-              </div>
-            </div>
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={forecastBarData} margin={{ top: 0, right: 0, left: -25, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-                <XAxis dataKey="name" tick={{ fill: '#475569', fontSize: 9 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#475569', fontSize: 9 }} axisLine={false} tickLine={false} domain={[0, 100]} />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="current" name="Current Score" fill="#00f0ff" opacity={0.7} radius={[4, 4, 0, 0]} />
-                <Bar dataKey="predicted" name="Predicted Score" fill="#ef4444" opacity={0.7} radius={[4, 4, 0, 0]} />
-                <Legend wrapperStyle={{ fontSize: 11, color: '#64748b' }} />
-              </BarChart>
-            </ResponsiveContainer>
+        {/* MONTHLY CONFIDENCE TABLE */}
+        <div className="glass-card" style={{ padding: 24 }}>
+          <div className="section-header" style={{ marginBottom: 18 }}>
+            <div className="section-header-line" />
+            <span className="section-title">Monthly Confidence</span>
           </div>
+          <table className="cyber-table" style={{ fontSize: 12 }}>
+            <thead>
+              <tr>
+                <th style={{ fontSize: 10 }}>Month</th>
+                <th style={{ fontSize: 10 }}>Predicted</th>
+                <th style={{ fontSize: 10 }}>Confidence</th>
+              </tr>
+            </thead>
+            <tbody>
+              {RISK_FORECAST.map((r) => (
+                <tr key={r.month}>
+                  <td style={{ color: '#f1f5f9', fontWeight: 600, fontSize: 12 }}>{r.month}</td>
+                  <td>
+                    <div style={{ color: '#8b5cf6', fontWeight: 700, fontSize: 12 }}>
+                      {r.predicted.toLocaleString()}
+                    </div>
+                    <div style={{ fontSize: 10, color: '#64748b' }}>
+                      {r.low.toLocaleString()}–{r.high.toLocaleString()}
+                    </div>
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{ flex: 1, height: 4, background: 'rgba(255,255,255,0.07)', borderRadius: 2, overflow: 'hidden' }}>
+                        <div style={{
+                          height: '100%', borderRadius: 2,
+                          width: `${r.confidence}%`,
+                          background: r.confidence >= 70 ? '#10b981' : r.confidence >= 60 ? '#f59e0b' : '#ef4444',
+                        }} />
+                      </div>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', minWidth: 28 }}>{r.confidence}%</span>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-          {/* High Risk District List */}
-          <div className="glass-card p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-bold text-sm tracking-wide" style={{ color: '#e2e8f0' }}>HIGH-RISK DISTRICTS</h2>
-              <span className="badge badge-red">AI ALERT</span>
-            </div>
-            <div className="space-y-2">
-              {topRisk.map((d, i) => {
-                const riskColor = { critical: '#ef4444', high: '#f59e0b', medium: '#0ea5e9', low: '#10b981' }[d.riskLevel] || '#64748b';
-                return (
-                  <div key={d.id} className="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all"
-                    style={{
-                      background: selectedDistrict === d.name ? `${riskColor}10` : 'rgba(15,23,42,0.3)',
-                      border: `1px solid ${selectedDistrict === d.name ? riskColor + '30' : 'rgba(255,255,255,0.05)'}`,
-                    }}
-                    onClick={() => setSelectedDistrict(selectedDistrict === d.name ? null : d.name)}>
-                    <div className="text-xs font-black w-5" style={{ color: '#334155' }}>#{i + 1}</div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold truncate" style={{ color: '#e2e8f0' }}>{d.name}</span>
-                        <span className={`badge ${d.riskLevel === 'critical' ? 'badge-red' : d.riskLevel === 'high' ? 'badge-amber' : 'badge-cyan'}`} style={{ fontSize: '9px' }}>
-                          {d.riskLevel.toUpperCase()}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3 mt-1">
-                        <span className="text-xs" style={{ color: '#475569' }}>{d.crimeCount.toLocaleString()} crimes</span>
-                        <span className="text-xs" style={{ color: '#475569' }}>Rate: {d.crimeRate}/lakh</span>
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end">
-                      <div className="flex items-center gap-1">
-                        {d.change > 0 ? <ChevronUp size={12} style={{ color: '#ef4444' }} /> : <ChevronDown size={12} style={{ color: '#10b981' }} />}
-                        <span className="text-xs font-bold" style={{ color: d.change > 0 ? '#ef4444' : '#10b981' }}>
-                          {d.change > 0 ? '+' : ''}{d.change}%
-                        </span>
-                      </div>
-                      <span className="text-xs" style={{ color: '#475569' }}>YoY</span>
-                    </div>
+      {/* SECTION 5: AI PREDICTION INSIGHTS */}
+      <div>
+        <div className="section-header" style={{ marginBottom: 16 }}>
+          <div className="section-header-line" />
+          <span className="section-title">AI Prediction Insights</span>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
+          {aiInsights.map((ins) => {
+            const Icon = ins.icon;
+            return (
+              <div
+                key={ins.title}
+                className="glass-card"
+                style={{ padding: 20, background: ins.bg, border: `1px solid ${ins.border}` }}
+              >
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 12 }}>
+                  <div style={{
+                    width: 36, height: 36, borderRadius: 9, flexShrink: 0,
+                    background: `${ins.color}18`, border: `1px solid ${ins.color}33`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <Icon size={17} color={ins.color} />
                   </div>
-                );
-              })}
-            </div>
-          </div>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#f1f5f9', marginBottom: 4, lineHeight: 1.4 }}>
+                      {ins.title}
+                    </div>
+                    <span className={ins.badgeClass}>{ins.badge}</span>
+                  </div>
+                </div>
+                <p style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.6 }}>{ins.desc}</p>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
