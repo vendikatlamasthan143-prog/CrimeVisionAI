@@ -12,7 +12,8 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '@/components/LanguageToggle';
 import { DISTRICTS, RESOURCE_ALLOCATION, SUMMARY_METRICS, type District } from '@/lib/crimeData';
-import { getAnthropicApiKey, hasAnthropicApiKey } from '@/lib/apiKey';
+import { hasAnyApiKey } from '@/lib/apiKey';
+import { generateText } from '@/lib/aiService';
 
 // ─── Risk color mapping ───────────────────────────────────────────────────────
 
@@ -54,7 +55,7 @@ interface JPDF {
 
 // ─── AI Deployment Generator ──────────────────────────────────────────────────
 
-async function generateDeployment(district: District, apiKey: string): Promise<string> {
+async function generateDeployment(district: District): Promise<string> {
   const rc = RESOURCE_ALLOCATION.find(r => r.district === district.name);
   const riskColor = getRiskColor(district.riskScore);
 
@@ -77,24 +78,9 @@ Write a 3-paragraph actionable deployment recommendation:
 
 Be precise with numbers and specific Karnataka geography. Format as plain text paragraphs with section headers.`;
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 800,
-      messages: [{ role: 'user', content: prompt }],
-    }),
+  return generateText({
+    messages: [{ role: 'user', content: prompt }]
   });
-
-  if (!response.ok) throw new Error(`API Error ${response.status}`);
-  const data = await response.json() as { content: { type: string; text: string }[] };
-  return data.content?.[0]?.text ?? 'No recommendation generated.';
 }
 
 // ─── District Grid Cell ───────────────────────────────────────────────────────
@@ -139,6 +125,7 @@ function HeatmapContent() {
   const [deploymentRec, setDeploymentRec] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [filterRisk, setFilterRisk] = useState('All');
+  const [mapTab, setMapTab] = useState<'visual' | 'list'>('visual');
   const [isDownloading, setIsDownloading] = useState(false);
 
   const [apiKeyMissing, setApiKeyMissing] = useState(false);
@@ -147,7 +134,7 @@ function HeatmapContent() {
 
   // Check key on mount
   useEffect(() => {
-    setApiKeyMissing(!hasAnthropicApiKey());
+    setApiKeyMissing(!hasAnyApiKey());
   }, []);
 
   const filteredDistricts = filterRisk === 'All' ? DISTRICTS :
@@ -158,12 +145,11 @@ function HeatmapContent() {
   const sortedDistricts = [...DISTRICTS].sort((a, b) => b.riskScore - a.riskScore);
 
   const handleGenerateDeployment = useCallback(async () => {
-    const activeKey = getAnthropicApiKey();
-    if (!activeKey) { setDeploymentRec('⚠️ API key not configured. Please enter your API key in the Investigator page first.'); return; }
+    if (!hasAnyApiKey()) { setDeploymentRec('⚠️ API key not configured. Please enter your API key in the Investigator page first.'); return; }
     setIsGenerating(true);
     setDeploymentRec('');
     try {
-      const rec = await generateDeployment(selectedDistrict, activeKey);
+      const rec = await generateDeployment(selectedDistrict);
       setDeploymentRec(rec);
     } catch (err) {
       setDeploymentRec(`⚠️ Error: ${(err as Error).message}`);
@@ -361,23 +347,177 @@ function HeatmapContent() {
       </div>
 
       {/* Main content */}
-      <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
+      <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start', flexWrap: 'wrap' }}>
 
-        {/* Heatmap Grid */}
-        <div style={{ flex: 1 }}>
+        {/* Heatmap Grid / Map */}
+        <div style={{ flex: 1, minWidth: 320 }}>
           <div style={{
             padding: 20, borderRadius: 16, background: 'rgba(2,6,23,0.9)',
             border: '1px solid rgba(255,255,255,0.07)',
           }}>
-            <div style={{ fontSize: 10, fontWeight: 800, color: '#64748b', textTransform: 'uppercase',
-              letterSpacing: '0.1em', marginBottom: 16 }}>
-              Karnataka — 31 Districts by Risk Score (click to select)
+            {/* Tab Toggles */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 16, borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 10 }}>
+              <button onClick={() => setMapTab('visual')}
+                style={{
+                  padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                  background: mapTab === 'visual' ? 'rgba(0,240,255,0.1)' : 'transparent',
+                  border: `1px solid ${mapTab === 'visual' ? 'rgba(0,240,255,0.35)' : 'transparent'}`,
+                  color: mapTab === 'visual' ? '#00f0ff' : '#64748b', transition: 'all 0.15s'
+                }}>
+                🗺️ Visual Command Map
+              </button>
+              <button onClick={() => setMapTab('list')}
+                style={{
+                  padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                  background: mapTab === 'list' ? 'rgba(0,240,255,0.1)' : 'transparent',
+                  border: `1px solid ${mapTab === 'list' ? 'rgba(0,240,255,0.35)' : 'transparent'}`,
+                  color: mapTab === 'list' ? '#00f0ff' : '#64748b', transition: 'all 0.15s'
+                }}>
+                📋 District Registry List
+              </button>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(88px, 1fr))', gap: 6 }}>
-              {(filterRisk === 'All' ? sortedDistricts : filteredDistricts.sort((a, b) => b.riskScore - a.riskScore)).map(d => (
-                <DistrictCell key={d.id} d={d} isSelected={selectedDistrict.id === d.id} onClick={() => { setSelectedDistrict(d); setDeploymentRec(''); }} />
-              ))}
-            </div>
+
+            {mapTab === 'visual' ? (
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: '#64748b', textTransform: 'uppercase',
+                  letterSpacing: '0.1em', marginBottom: 12 }}>
+                  Karnataka State Police Command Grid Heatmap (Interactive Nodes)
+                </div>
+                
+                <div style={{
+                  position: 'relative', width: '100%', aspectRatio: '1/1', background: 'rgba(5, 12, 28, 0.95)',
+                  borderRadius: 12, border: '1px solid rgba(0, 240, 255, 0.15)', overflow: 'hidden', padding: 8
+                }}>
+                  <svg width="100%" height="100%" viewBox="0 0 400 400" style={{ display: 'block' }}>
+                    <defs>
+                      <pattern id="map-grid-pattern" width="20" height="20" patternUnits="userSpaceOnUse">
+                        <path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(0, 240, 255, 0.035)" strokeWidth="1" />
+                      </pattern>
+                    </defs>
+                    
+                    {/* Background Grid */}
+                    <rect width="100%" height="100%" fill="url(#map-grid-pattern)" />
+
+                    {/* Georelational mesh lines between districts (Distance threshold connection) */}
+                    {(() => {
+                      const lines: React.ReactNode[] = [];
+                      for (let i = 0; i < DISTRICTS.length; i++) {
+                        for (let j = i + 1; j < DISTRICTS.length; j++) {
+                          const d1 = DISTRICTS[i];
+                          const d2 = DISTRICTS[j];
+                          const dist = Math.sqrt(Math.pow(d1.lat - d2.lat, 2) + Math.pow(d1.lng - d2.lng, 2));
+                          // Connect if adjacent geographically
+                          if (dist < 1.15) {
+                            const x1 = ((d1.lng - 74.0) / 4.5) * 360 + 20;
+                            const y1 = 380 - ((d1.lat - 11.5) / 6.5) * 360;
+                            const x2 = ((d2.lng - 74.0) / 4.5) * 360 + 20;
+                            const y2 = 380 - ((d2.lat - 11.5) / 6.5) * 360;
+                            lines.push(
+                              <line
+                                key={`line-${d1.id}-${d2.id}`}
+                                x1={x1}
+                                y1={y1}
+                                x2={x2}
+                                y2={y2}
+                                stroke="rgba(0, 240, 255, 0.09)"
+                                strokeWidth={0.75}
+                                strokeDasharray="2,2"
+                              />
+                            );
+                          }
+                        }
+                      }
+                      return lines;
+                    })()}
+
+                    {/* Interactive District Nodes */}
+                    {sortedDistricts.map(d => {
+                      const x = ((d.lng - 74.0) / 4.5) * 360 + 20;
+                      const y = 380 - ((d.lat - 11.5) / 6.5) * 360;
+                      const rc = getRiskColor(d.riskScore);
+                      const isSelected = selectedDistrict.id === d.id;
+
+                      return (
+                        <g
+                          key={`node-${d.id}`}
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => { setSelectedDistrict(d); setDeploymentRec(''); }}
+                        >
+                          {/* Selection Target Ring */}
+                          {isSelected && (
+                            <circle
+                              cx={x}
+                              cy={y}
+                              r={16}
+                              fill="none"
+                              stroke="#00f0ff"
+                              strokeWidth={1.5}
+                              strokeDasharray="3,3"
+                              style={{ transformOrigin: `${x}px ${y}px`, animation: 'spin 6s linear infinite' }}
+                            />
+                          )}
+
+                          {/* Glowing Sonar Signal Ring */}
+                          <circle
+                            cx={x}
+                            cy={y}
+                            r={isSelected ? 10 : 8}
+                            fill="none"
+                            stroke={rc.text}
+                            strokeWidth={1.5}
+                            opacity={isSelected ? 0.8 : 0.4}
+                            style={{
+                              transformOrigin: `${x}px ${y}px`,
+                              animation: isSelected ? 'radar-sweep 1.8s infinite' : 'pulse 2.2s infinite'
+                            }}
+                          />
+
+                          {/* Core Node Dot */}
+                          <circle
+                            cx={x}
+                            cy={y}
+                            r={isSelected ? 6 : 4.5}
+                            fill={rc.text}
+                            style={{
+                              filter: `drop-shadow(0 0 6px ${rc.text})`,
+                            }}
+                          />
+
+                          {/* District Abbreviation Text */}
+                          <text
+                            x={x}
+                            y={y - 8}
+                            fill={isSelected ? '#00f0ff' : '#94a3b8'}
+                            fontSize={8}
+                            fontWeight={isSelected ? 'bold' : 'normal'}
+                            textAnchor="middle"
+                            style={{
+                              fontFamily: 'monospace',
+                              pointerEvents: 'none',
+                              textShadow: '0 1px 2px rgba(0,0,0,0.95)'
+                            }}
+                          >
+                            {d.code}
+                          </text>
+                        </g>
+                      );
+                    })}
+                  </svg>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 800, color: '#64748b', textTransform: 'uppercase',
+                  letterSpacing: '0.1em', marginBottom: 16 }}>
+                  Karnataka — 31 Districts by Risk Score (click to select)
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(88px, 1fr))', gap: 6 }}>
+                  {(filterRisk === 'All' ? sortedDistricts : filteredDistricts.sort((a, b) => b.riskScore - a.riskScore)).map(d => (
+                    <DistrictCell key={d.id} d={d} isSelected={selectedDistrict.id === d.id} onClick={() => { setSelectedDistrict(d); setDeploymentRec(''); }} />
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Color bar at bottom */}
             <div style={{ marginTop: 20, height: 6, borderRadius: 3, background: 'linear-gradient(to right, #10b981, #eab308, #f59e0b, #ef4444)' }} />
@@ -537,7 +677,17 @@ function HeatmapContent() {
         </div>
       </div>
 
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes radar-sweep {
+          0% { r: 5; opacity: 1; }
+          100% { r: 24; opacity: 0; }
+        }
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); opacity: 0.35; }
+          50% { transform: scale(1.15); opacity: 0.7; }
+        }
+      `}</style>
     </div>
   );
 }

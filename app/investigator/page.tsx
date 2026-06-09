@@ -14,7 +14,12 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '@/components/LanguageToggle';
 import { SUMMARY_METRICS, TOP_SUSPECTS, RECENT_FIRS, DISTRICTS } from '@/lib/crimeData';
-import { getAnthropicApiKey, setAnthropicApiKey, hasAnthropicApiKey, clearAnthropicApiKey } from '@/lib/apiKey';
+import {
+  getAnthropicApiKey, setAnthropicApiKey, hasAnthropicApiKey, clearAnthropicApiKey,
+  getGeminiApiKey, setGeminiApiKey, hasGeminiApiKey, clearGeminiApiKey,
+  getActiveProvider, getActiveApiKey, hasAnyApiKey
+} from '@/lib/apiKey';
+import { generateTextStream } from '@/lib/aiService';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -152,7 +157,8 @@ export default function InvestigatorPage() {
   const [voiceSupported, setVoiceSupported] = useState(false);
   const [apiKeyMissing, setApiKeyMissing] = useState(false);
   const [showKeyManager, setShowKeyManager] = useState(false);
-  const [customApiKey, setCustomApiKey] = useState('');
+  const [customAnthropicKey, setCustomAnthropicKey] = useState('');
+  const [customGeminiKey, setCustomGeminiKey] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [history, setHistory] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -164,10 +170,10 @@ export default function InvestigatorPage() {
 
   // Check API key on mount
   useEffect(() => {
-    const hasKey = hasAnthropicApiKey();
-    setApiKeyMissing(!hasKey);
+    setApiKeyMissing(!hasAnyApiKey());
     if (typeof window !== 'undefined') {
-      setCustomApiKey(localStorage.getItem('ksp_anthropic_api_key') || '');
+      setCustomAnthropicKey(localStorage.getItem('ksp_anthropic_api_key') || '');
+      setCustomGeminiKey(localStorage.getItem('ksp_gemini_api_key') || '');
     }
   }, []);
 
@@ -198,7 +204,7 @@ export default function InvestigatorPage() {
   const handleSend = useCallback(async (textToSend: string) => {
     const text = textToSend.trim();
     if (!text || isLoading) return;
-    const activeKey = getAnthropicApiKey();
+    const activeKey = getActiveApiKey();
     if (!activeKey) { setApiKeyMissing(true); return; }
 
     const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -218,60 +224,19 @@ export default function InvestigatorPage() {
 
     try {
       abortRef.current = new AbortController();
-
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': activeKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
-          max_tokens: 2048,
-          system: SYSTEM_PROMPT,
-          messages: historyForAPI,
-          stream: true,
-        }),
-        signal: abortRef.current.signal,
-      });
-
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({ error: { message: `HTTP ${response.status}` } }));
-        throw new Error(errData.error?.message || `API Error ${response.status}`);
-      }
-
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
       let fullText = '';
 
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          const chunk = decoder.decode(value, { stream: true });
-          for (const line of chunk.split('\n')) {
-            if (line.startsWith('data: ')) {
-              const data = line.slice(6).trim();
-              if (data === '[DONE]' || data === '') continue;
-              try {
-                const parsed = JSON.parse(data);
-                // SSE event types for Anthropic streaming
-                if (parsed.type === 'content_block_delta' && parsed.delta?.type === 'text_delta') {
-                  fullText += parsed.delta.text;
-                  setMessages(prev =>
-                    prev.map(m => m.id === aiId ? { ...m, content: fullText } : m)
-                  );
-                }
-              } catch {
-                // skip malformed lines
-              }
-            }
-          }
+      await generateTextStream({
+        systemPrompt: SYSTEM_PROMPT,
+        messages: historyForAPI,
+        signal: abortRef.current.signal,
+        onChunk: (textChunk) => {
+          fullText += textChunk;
+          setMessages(prev =>
+            prev.map(m => m.id === aiId ? { ...m, content: fullText } : m)
+          );
         }
-      }
+      });
 
       setMessages(prev =>
         prev.map(m => m.id === aiId ? { ...m, content: fullText || 'No response generated.', isStreaming: false } : m)
@@ -454,7 +419,7 @@ export default function InvestigatorPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {/* API status */}
           <button onClick={() => setShowKeyManager(prev => !prev)}
-            title="Configure Anthropic API Key"
+            title="Configure AI API Keys"
             style={{
               display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px',
               borderRadius: 8, border: `1px solid ${apiKeyMissing ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.3)'}`,
@@ -468,7 +433,13 @@ export default function InvestigatorPage() {
               animation: !apiKeyMissing ? 'pulse 2s infinite' : 'none',
             }} />
             <span style={{ fontSize: 10, fontWeight: 700, color: apiKeyMissing ? '#ef4444' : '#10b981', letterSpacing: '0.08em' }}>
-              {apiKeyMissing ? 'CLAUDE OFFLINE' : 'CLAUDE ONLINE'}
+              {apiKeyMissing
+                ? 'AI OFFLINE'
+                : hasGeminiApiKey() && hasAnthropicApiKey()
+                ? 'AI ONLINE (GEMINI + CLAUDE)'
+                : hasGeminiApiKey()
+                ? 'AI ONLINE (GEMINI)'
+                : 'AI ONLINE (CLAUDE)'}
             </span>
             <Settings size={10} style={{ color: apiKeyMissing ? '#ef4444' : '#10b981', marginLeft: 2 }} />
           </button>
@@ -503,68 +474,128 @@ export default function InvestigatorPage() {
             )}
             <div>
               <p style={{ color: apiKeyMissing ? '#ef4444' : '#00f0ff', fontSize: 13, fontWeight: 700, margin: '0 0 4px' }}>
-                {apiKeyMissing ? 'Anthropic API Key Required' : 'Anthropic API Key Settings'}
+                {apiKeyMissing ? 'AI API Keys Configuration Required' : 'AI API Keys Settings'}
               </p>
               <p style={{ color: '#94a3b8', fontSize: 12, margin: 0, lineHeight: 1.6 }}>
-                CrimeNet AI runs entirely in your browser using direct API calls.
-                Since this is a static build (deployed on GitHub Pages), the API key must be supplied.
-                Paste your key below. It is saved securely in your local browser storage and never sent anywhere else.
+                CrimeNet AI runs entirely in your browser. Configure either **Google Gemini API** (recommended for hackathon) or **Anthropic Claude API**.
+                Your keys are stored securely in local browser storage and never sent anywhere else.
               </p>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 10, maxWidth: 600, alignItems: 'center', marginLeft: 30 }}>
-            <input
-              type="password"
-              placeholder="sk-ant-api03-..."
-              value={customApiKey}
-              onChange={e => setCustomApiKey(e.target.value)}
-              style={{
-                flex: 1, padding: '8px 12px', background: 'rgba(10,22,40,0.8)',
-                border: '1px solid rgba(0,240,255,0.2)', borderRadius: 8,
-                color: '#f1f5f9', fontSize: 12, outline: 'none',
-              }}
-            />
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginLeft: 30, maxWidth: 800 }}>
+            {/* Gemini Config */}
+            <div style={{ padding: 12, borderRadius: 10, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#00f0ff', marginBottom: 6 }}>1. Google Gemini Key</div>
+              <input
+                type="password"
+                placeholder="AIzaSy... (Gemini Key)"
+                value={customGeminiKey}
+                onChange={e => setCustomGeminiKey(e.target.value)}
+                style={{
+                  width: '100%', padding: '6px 10px', background: 'rgba(10,22,40,0.8)',
+                  border: '1px solid rgba(0,240,255,0.2)', borderRadius: 6,
+                  color: '#f1f5f9', fontSize: 12, outline: 'none', boxSizing: 'border-box', marginBottom: 8
+                }}
+              />
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button
+                  onClick={() => {
+                    if (customGeminiKey.trim()) {
+                      setGeminiApiKey(customGeminiKey);
+                      setApiKeyMissing(!hasAnyApiKey());
+                    } else {
+                      clearGeminiApiKey();
+                      setApiKeyMissing(!hasAnyApiKey());
+                    }
+                  }}
+                  style={{
+                    padding: '5px 10px', background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)',
+                    borderRadius: 6, color: '#10b981', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit'
+                  }}
+                >
+                  Save Gemini
+                </button>
+                {hasGeminiApiKey() && (
+                  <button
+                    onClick={() => {
+                      clearGeminiApiKey();
+                      setCustomGeminiKey('');
+                      setApiKeyMissing(!hasAnyApiKey());
+                    }}
+                    style={{
+                      padding: '5px 10px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
+                      borderRadius: 6, color: '#ef4444', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit'
+                    }}
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Anthropic Config */}
+            <div style={{ padding: 12, borderRadius: 10, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#8b5cf6', marginBottom: 6 }}>2. Anthropic Claude Key</div>
+              <input
+                type="password"
+                placeholder="sk-ant-api03... (Claude Key)"
+                value={customAnthropicKey}
+                onChange={e => setCustomAnthropicKey(e.target.value)}
+                style={{
+                  width: '100%', padding: '6px 10px', background: 'rgba(10,22,40,0.8)',
+                  border: '1px solid rgba(0,240,255,0.2)', borderRadius: 6,
+                  color: '#f1f5f9', fontSize: 12, outline: 'none', boxSizing: 'border-box', marginBottom: 8
+                }}
+              />
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button
+                  onClick={() => {
+                    if (customAnthropicKey.trim()) {
+                      setAnthropicApiKey(customAnthropicKey);
+                      setApiKeyMissing(!hasAnyApiKey());
+                    } else {
+                      clearAnthropicApiKey();
+                      setApiKeyMissing(!hasAnyApiKey());
+                    }
+                  }}
+                  style={{
+                    padding: '5px 10px', background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)',
+                    borderRadius: 6, color: '#10b981', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit'
+                  }}
+                >
+                  Save Claude
+                </button>
+                {hasAnthropicApiKey() && (
+                  <button
+                    onClick={() => {
+                      clearAnthropicApiKey();
+                      setCustomAnthropicKey('');
+                      setApiKeyMissing(!hasAnyApiKey());
+                    }}
+                    style={{
+                      padding: '5px 10px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
+                      borderRadius: 6, color: '#ef4444', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit'
+                    }}
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginRight: 10 }}>
             <button
               onClick={() => {
-                if (customApiKey.trim()) {
-                  setAnthropicApiKey(customApiKey);
-                  setApiKeyMissing(false);
-                  setShowKeyManager(false);
-                } else {
-                  clearAnthropicApiKey();
-                  setApiKeyMissing(true);
-                }
+                setShowKeyManager(false);
+                setApiKeyMissing(!hasAnyApiKey());
               }}
               style={{
-                padding: '8px 16px', background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)',
-                borderRadius: 8, color: '#10b981', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit'
+                padding: '8px 20px', background: 'rgba(0,240,255,0.12)', border: '1px solid rgba(0,240,255,0.3)',
+                borderRadius: 8, color: '#00f0ff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit'
               }}
             >
-              Save Key
-            </button>
-            {!apiKeyMissing && (
-              <button
-                onClick={() => {
-                  clearAnthropicApiKey();
-                  setCustomApiKey('');
-                  setApiKeyMissing(true);
-                }}
-                style={{
-                  padding: '8px 16px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
-                  borderRadius: 8, color: '#ef4444', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit'
-                }}
-              >
-                Clear Key
-              </button>
-            )}
-            <button
-              onClick={() => setShowKeyManager(false)}
-              style={{
-                padding: '8px 16px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: 8, color: '#94a3b8', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit'
-              }}
-            >
-              Cancel
+              Done
             </button>
           </div>
         </div>

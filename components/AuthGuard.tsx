@@ -77,9 +77,9 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
 
   // Authenticated pages: sidebar + topbar layout
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen w-full overflow-hidden">
       <Sidebar user={user} />
-      <main className="flex-1 min-h-screen" style={{ marginLeft: '288px' }}>
+      <main className="flex-1 min-h-screen min-w-0" style={{ paddingLeft: '280px' }}>
         <Topbar user={user} />
         <div style={{ paddingTop: '64px' }}>
           {children}

@@ -156,7 +156,7 @@ export default function Topbar({ user }: TopbarProps) {
       <header
         className="fixed top-0 right-0 flex items-center justify-between px-5 py-3 z-40"
         style={{
-          left: '288px',
+          left: '280px',
           background: 'rgba(2, 6, 23, 0.95)',
           borderBottom: '1px solid rgba(0, 240, 255, 0.1)',
           backdropFilter: 'blur(24px)',

@@ -10,7 +10,8 @@ import {
   Shield, Zap, Clock, Activity, MapPin, ChevronUp,
 } from 'lucide-react';
 import { useLanguage } from '@/components/LanguageToggle';
-import { getAnthropicApiKey, hasAnthropicApiKey } from '@/lib/apiKey';
+import { hasAnyApiKey } from '@/lib/apiKey';
+import { generateText } from '@/lib/aiService';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -131,38 +132,18 @@ export default function PredictionsPage() {
 
   // Check API key on mount
   useEffect(() => {
-    setApiKeyMissing(!hasAnthropicApiKey());
+    setApiKeyMissing(!hasAnyApiKey());
   }, []);
 
   const generatePrediction = useCallback(async () => {
-    const activeKey = getAnthropicApiKey();
-    if (!activeKey) { setApiKeyMissing(true); return; }
+    if (!hasAnyApiKey()) { setApiKeyMissing(true); return; }
     setIsLoading(true);
     setError(null);
 
     try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': activeKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
-          max_tokens: 4096,
-          messages: [{ role: 'user', content: PREDICTION_PROMPT }],
-        }),
+      const text = await generateText({
+        messages: [{ role: 'user', content: PREDICTION_PROMPT }]
       });
-
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error((errData as Record<string, Record<string, string>>).error?.message || `API Error ${response.status}`);
-      }
-
-      const data = await response.json() as { content: { type: string; text: string }[] };
-      const text = data.content?.[0]?.type === 'text' ? data.content[0].text : '';
 
       // Extract JSON from response (handles extra text if any)
       const jsonMatch = text.match(/\{[\s\S]*\}/);

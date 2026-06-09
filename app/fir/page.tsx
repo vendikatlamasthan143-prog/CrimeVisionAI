@@ -8,15 +8,16 @@ import { useSearchParams } from 'next/navigation';
 import {
   FileText, Brain, Download, Search, X, ChevronRight,
   AlertTriangle, Clock, MapPin, User, Shield, Zap,
-  CheckCircle, Activity, Loader, Copy, Check
+  CheckCircle, Activity, Loader, Copy, Check, Eye
 } from 'lucide-react';
 import { useLanguage } from '@/components/LanguageToggle';
 import { RECENT_FIRS, TOP_SUSPECTS, DISTRICTS, type FIRRecord } from '@/lib/crimeData';
-import { getAnthropicApiKey } from '@/lib/apiKey';
+import { hasAnyApiKey } from '@/lib/apiKey';
+import { generateText } from '@/lib/aiService';
 
 // ─── AI Case Summary ──────────────────────────────────────────────────────────
 
-async function generateAICaseSummary(fir: FIRRecord, apiKey: string): Promise<string> {
+async function generateAICaseSummary(fir: FIRRecord): Promise<string> {
   const suspect = TOP_SUSPECTS.find(s => s.name === fir.suspectName);
   const district = DISTRICTS.find(d => d.name === fir.district);
 
@@ -40,24 +41,9 @@ Write a 3-4 paragraph professional intelligence summary covering:
 
 Use formal KSP intelligence report style. Be specific and actionable.`;
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 1024,
-      messages: [{ role: 'user', content: prompt }],
-    }),
+  return generateText({
+    messages: [{ role: 'user', content: prompt }]
   });
-
-  if (!response.ok) throw new Error(`API Error ${response.status}`);
-  const data = await response.json() as { content: { type: string; text: string }[] };
-  return data.content?.[0]?.text ?? 'No summary generated.';
 }
 
 // ─── jsPDF loader ─────────────────────────────────────────────────────────────
@@ -150,12 +136,11 @@ function FIRDetailPanel({ fir }: { fir: FIRRecord }) {
   const pc = priorityColors[fir.priority] ?? priorityColors.Low;
 
   const handleGenerateSummary = useCallback(async () => {
-    const activeKey = getAnthropicApiKey();
-    if (!activeKey) { setAiSummary('⚠️ API key not configured. Please enter your API key in the Investigator page first.'); return; }
+    if (!hasAnyApiKey()) { setAiSummary('⚠️ API key not configured. Please enter your API key in the Investigator page first.'); return; }
     setIsGenerating(true);
     setAiSummary('');
     try {
-      const summary = await generateAICaseSummary(fir, activeKey);
+      const summary = await generateAICaseSummary(fir);
       setAiSummary(summary);
     } catch (err) {
       setAiSummary(`⚠️ Error: ${(err as Error).message}`);
@@ -348,6 +333,20 @@ function FIRDetailPanel({ fir }: { fir: FIRRecord }) {
         </div>
       )}
 
+      {/* Evidence Panel */}
+      <div style={{ padding: 16, borderRadius: 12, background: 'rgba(2,6,23,0.85)', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ fontSize: 10, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Eye size={11} /> Forensics &amp; Evidence Log
+        </div>
+        <div style={{ fontSize: 13, color: '#00f0ff', fontWeight: 600, background: 'rgba(0,0,0,0.15)', padding: '10px 12px', borderRadius: 8, border: '1px solid rgba(0,240,255,0.1)' }}>
+          {fir.id === '1' ? 'CCTV footage of transaction counters, IP Log from routing node' :
+           fir.id === '2' ? '8.2kg methamphetamine seized in vehicle trunk, suspect phone SIM trace' :
+           fir.id === '3' ? 'Truck vehicle registry logs, river sand deposits geolocation trace' :
+           fir.id === '4' ? 'CDR log logs, gang syndicate communication wiretap records' :
+           'CCTV footage log, digital logs trace, cell tower location logs'}
+        </div>
+      </div>
+
       {/* Description */}
       <div style={{ padding: 16, borderRadius: 12, background: 'rgba(2,6,23,0.85)', border: '1px solid rgba(255,255,255,0.06)' }}>
         <div style={{ fontSize: 10, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -438,8 +437,8 @@ function FIRPageContent() {
     if (id) {
       const found = RECENT_FIRS.find(f => f.id === id || f.firNumber === id);
       if (found) setSelectedFIR(found);
-    } else if (RECENT_FIRS.length > 0) {
-      setSelectedFIR(RECENT_FIRS[0]);
+    } else {
+      setSelectedFIR(null);
     }
   }, [searchParams]);
 
@@ -455,83 +454,121 @@ function FIRPageContent() {
   return (
     <div style={{ padding: 24, minHeight: '100vh' }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24 }}>
-        <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(0,240,255,0.1)',
-          border: '1px solid rgba(0,240,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <FileText size={22} color="#00f0ff" />
-        </div>
-        <div>
-          <h1 style={{ fontSize: 20, fontWeight: 900, color: '#f1f5f9', margin: 0 }}>{t.page_fir ?? 'FIR Intelligence'}</h1>
-          <p style={{ fontSize: 12, color: '#64748b', margin: '2px 0 0' }}>
-            {RECENT_FIRS.length} FIRs · Click any FIR for full details + AI Case Summary
-          </p>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(0,240,255,0.1)',
+            border: '1px solid rgba(0,240,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <FileText size={22} color="#00f0ff" />
+          </div>
+          <div>
+            <h1 style={{ fontSize: 20, fontWeight: 900, color: '#f1f5f9', margin: 0 }}>{t.page_fir ?? 'FIR Intelligence Registry'}</h1>
+            <p style={{ fontSize: 12, color: '#64748b', margin: '2px 0 0' }}>
+              {RECENT_FIRS.length} FIRs · Click any FIR card to open the Case Intelligence Drawer
+            </p>
+          </div>
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
-        {/* Left: FIR List */}
-        <div style={{ width: 320, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {/* Search + Filters */}
-          <div style={{ padding: 14, borderRadius: 12, background: 'rgba(2,6,23,0.9)', border: '1px solid rgba(255,255,255,0.07)' }}>
-            <div style={{ position: 'relative', marginBottom: 10 }}>
-              <Search size={12} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#475569', pointerEvents: 'none' }} />
-              <input
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Search FIR, crime, district..."
-                style={{ width: '100%', paddingLeft: 30, paddingRight: searchQuery ? 28 : 10, paddingTop: 7, paddingBottom: 7,
-                  background: 'rgba(10,22,40,0.8)', border: '1px solid rgba(0,240,255,0.2)', borderRadius: 8,
-                  color: '#f1f5f9', fontSize: 12, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
-              />
-              {searchQuery && (
-                <button onClick={() => setSearchQuery('')}
-                  style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
-                    background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: 0 }}>
-                  <X size={11} />
-                </button>
-              )}
-            </div>
-            <div style={{ display: 'flex', gap: 6 }}>
-              {['All', 'Critical', 'High', 'Medium'].map(p => (
-                <button key={p} onClick={() => setFilterPriority(p)}
-                  style={{ flex: 1, padding: '4px 0', borderRadius: 6, fontSize: 9, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-                    border: `1px solid ${filterPriority === p ? 'rgba(0,240,255,0.4)' : 'rgba(255,255,255,0.06)'}`,
-                    background: filterPriority === p ? 'rgba(0,240,255,0.1)' : 'transparent',
-                    color: filterPriority === p ? '#00f0ff' : '#64748b' }}>
-                  {p}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div style={{ fontSize: 10, color: '#475569', padding: '0 4px' }}>
-            {filteredFIRs.length} of {RECENT_FIRS.length} FIRs
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 'calc(100vh - 240px)', overflowY: 'auto' }}>
-            {filteredFIRs.map(fir => (
-              <FIRCard key={fir.id} fir={fir} onClick={() => setSelectedFIR(fir)} isSelected={selectedFIR?.id === fir.id} />
-            ))}
-            {filteredFIRs.length === 0 && (
-              <div style={{ textAlign: 'center', padding: 32, color: '#475569', fontSize: 12 }}>No FIRs match your search.</div>
+      {/* Search & Filter Bar (Full Width) */}
+      <div style={{ padding: 18, borderRadius: 12, background: 'rgba(2,6,23,0.9)', border: '1px solid rgba(255,255,255,0.07)', marginBottom: 20 }}>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{ position: 'relative', flex: 1, minWidth: 260 }}>
+            <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#475569', pointerEvents: 'none' }} />
+            <input
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search by FIR number, crime category, suspect name or district..."
+              style={{ width: '100%', paddingLeft: 36, paddingRight: searchQuery ? 30 : 12, paddingTop: 10, paddingBottom: 10,
+                background: 'rgba(10,22,40,0.8)', border: '1px solid rgba(0,240,255,0.2)', borderRadius: 10,
+                color: '#f1f5f9', fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery('')}
+                style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+                  background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: 0 }}>
+                <X size={13} />
+              </button>
             )}
           </div>
-        </div>
+          
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 11, color: '#64748b', alignSelf: 'center', fontWeight: 700, textTransform: 'uppercase', marginRight: 4 }}>Priority:</span>
+            {['All', 'Critical', 'High', 'Medium'].map(p => (
+              <button key={p} onClick={() => setFilterPriority(p)}
+                style={{ padding: '6px 14px', borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                  border: `1px solid ${filterPriority === p ? 'rgba(0,240,255,0.4)' : 'rgba(255,255,255,0.06)'}`,
+                  background: filterPriority === p ? 'rgba(0,240,255,0.1)' : 'transparent',
+                  color: filterPriority === p ? '#00f0ff' : '#64748b', transition: 'all 0.15s' }}>
+                {p}
+              </button>
+            ))}
+          </div>
 
-        {/* Right: FIR Detail */}
-        <div style={{ flex: 1, overflowY: 'auto', maxHeight: 'calc(100vh - 112px)' }}>
-          {selectedFIR ? (
-            <FIRDetailPanel key={selectedFIR.id} fir={selectedFIR} />
-          ) : (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 400, textAlign: 'center' }}>
-              <div>
-                <FileText size={36} color="#334155" style={{ marginBottom: 12 }} />
-                <p style={{ color: '#475569', fontSize: 14 }}>Select a FIR from the list to view full details</p>
-              </div>
-            </div>
-          )}
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginLeft: 'auto' }}>
+            <span style={{ fontSize: 11, color: '#64748b', alignSelf: 'center', fontWeight: 700, textTransform: 'uppercase', marginRight: 4 }}>Status:</span>
+            {['All', 'Under Investigation', 'Arrested', 'Closed'].map(s => (
+              <button key={s} onClick={() => setFilterStatus(s)}
+                style={{ padding: '6px 14px', borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                  border: `1px solid ${filterStatus === s ? 'rgba(0,240,255,0.4)' : 'rgba(255,255,255,0.06)'}`,
+                  background: filterStatus === s ? 'rgba(0,240,255,0.1)' : 'transparent',
+                  color: filterStatus === s ? '#00f0ff' : '#64748b', transition: 'all 0.15s' }}>
+                {s.replace('Under Investigation', 'Active')}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
+
+      {/* Grid of FIR Cards (Full Width) */}
+      <div className="responsive-grid-3" style={{ marginBottom: 20 }}>
+        {filteredFIRs.map(fir => (
+          <FIRCard key={fir.id} fir={fir} onClick={() => setSelectedFIR(fir)} isSelected={selectedFIR?.id === fir.id} />
+        ))}
+      </div>
+
+      {filteredFIRs.length === 0 && (
+        <div style={{ textAlign: 'center', padding: 60, borderRadius: 14, background: 'rgba(2,6,23,0.5)', border: '1px dashed rgba(255,255,255,0.08)' }}>
+          <FileText size={44} color="#334155" style={{ margin: '0 auto 12px' }} />
+          <p style={{ color: '#475569', fontSize: 14 }}>No FIR registry records match your search criteria.</p>
+        </div>
+      )}
+
+      {/* FIR Details Drawer */}
+      {selectedFIR && (
+        <div className="fixed inset-0 z-50 flex justify-end" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }}>
+          {/* Overlay Click to Close */}
+          <div className="absolute inset-0" onClick={() => setSelectedFIR(null)} />
+          
+          {/* Drawer content body */}
+          <div
+            className="relative w-[540px] max-w-full h-full p-6 flex flex-col border-l border-white/10 z-10"
+            style={{
+              background: 'rgba(2, 6, 23, 0.99)',
+              backdropFilter: 'blur(24px)',
+              boxShadow: '-10px 0 30px rgba(0,0,0,0.6)',
+              overflowY: 'auto'
+            }}
+          >
+            {/* Drawer Header Row */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18, borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ width: 3, height: 16, background: '#00f0ff', borderRadius: 1.5 }} />
+                <span style={{ fontSize: 13, fontWeight: 900, color: '#f1f5f9', letterSpacing: '0.05em' }}>CASE INTELLIGENCE FILE</span>
+              </div>
+              <button onClick={() => setSelectedFIR(null)}
+                style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: '#64748b', cursor: 'pointer', padding: 6, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+            
+            {/* Main Detail Panel */}
+            <div style={{ flex: 1 }}>
+              <FIRDetailPanel key={selectedFIR.id} fir={selectedFIR} />
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>

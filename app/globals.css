@@ -555,7 +555,7 @@ html, body {
 ───────────────────────────────────────────── */
 .page-content {
   min-height: 100vh;
-  padding: 28px 28px 28px 300px;
+  padding: 28px;
   overflow-y: auto;
 }
 
@@ -989,11 +989,32 @@ label, .label, .cyber-label, .metric-label, .sidebar-section-label {
   font-size: 15px !important;
 }
 
-/* Card content */
 .glass-card, .card-content, .card {
   font-size: 16px !important;
 }
 
+/* Prevent CSS Grid items from expanding beyond parent boundaries (fixes Recharts size blowouts) */
+.responsive-grid-4 > *,
+.responsive-grid-3 > *,
+.responsive-grid-2-1 > *,
+.responsive-grid-3-2 > *,
+.responsive-grid-1-340 > *,
+.responsive-grid-6 > *,
+.responsive-grid-2 > *,
+.responsive-grid-5 > *,
+.responsive-chat-layout > *,
+.responsive-map-layout > * {
+  min-width: 0;
+}
 
+/* Base body overflow control */
+body {
+  overflow-x: hidden !important;
+}
 
-
+/* Table container styling to ensure scroll inside cards */
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}

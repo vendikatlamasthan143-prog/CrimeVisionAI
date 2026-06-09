@@ -83,8 +83,9 @@ export default function Sidebar({ user }: SidebarProps) {
 
   return (
     <aside
-      className="fixed left-0 top-0 h-screen w-72 flex flex-col z-50"
+      className="fixed left-0 top-0 h-screen flex flex-col z-50"
       style={{
+        width: '280px',
         background: 'rgba(2, 6, 23, 0.98)',
         borderRight: '1px solid rgba(0, 240, 255, 0.12)',
         backdropFilter: 'blur(24px)',

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import {
   Bell, AlertTriangle, Shield, CheckCircle, Radio, Zap,
   ChevronRight, Clock, MapPin, X, RefreshCw, Send,
-  Users, Phone, Eye, Activity, Filter, Trash2, ArrowUpRight
+  Users, Phone, Eye, Activity, Filter, Trash2, ArrowUpRight, UserCheck
 } from 'lucide-react';
 import Link from 'next/link';
 import { LIVE_ALERTS, FIR_RECORDS, CRIMINAL_PROFILES } from '@/lib/mockData';
@@ -77,6 +77,9 @@ export default function AlertsPage() {
   const [closedAlerts, setClosedAlerts] = useState<Set<string>>(new Set());
   const [selectedAlertId, setSelectedAlertId] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string>('');
+  const [assignedOfficers, setAssignedOfficers] = useState<Record<string, string>>({});
+  
+  const KSP_OFFICERS = ["Inspector Girish", "Inspector Shanthakumar", "Inspector Anupama", "Inspector Venkatesh"];
 
   useEffect(() => {
     const updateTime = () => {
@@ -356,6 +359,11 @@ export default function AlertsPage() {
                         <CheckCircle size={10} style={{ marginRight: 3 }} /> ACK
                       </span>
                     )}
+                    {assignedOfficers[alert.id] && (
+                      <span className="badge badge-cyan" style={{ fontSize: 10 }}>
+                        <UserCheck size={10} style={{ marginRight: 3 }} /> {assignedOfficers[alert.id]}
+                      </span>
+                    )}
                   </div>
 
                   {/* TITLE */}
@@ -630,6 +638,52 @@ export default function AlertsPage() {
                 )}
               </div>
 
+              {/* ASSIGNED OFFICER */}
+              <div className="bg-black/15 p-3.5 rounded-lg border border-white/5 text-slate-300">
+                <span className="text-slate-500 uppercase tracking-wider text-[9px] block mb-1.5">Assigned Case Officer</span>
+                <div className="flex items-center justify-between mt-1">
+                  <span className="font-bold text-slate-200" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {assignedOfficers[selectedAlert.id] ? (
+                      <>
+                        <UserCheck size={12} color="#10b981" />
+                        <span style={{ color: '#10b981' }}>{assignedOfficers[selectedAlert.id]}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Users size={12} color="#64748b" />
+                        <span className="text-slate-400">UNASSIGNED</span>
+                      </>
+                    )}
+                  </span>
+                  
+                  <div>
+                    <select
+                      value={assignedOfficers[selectedAlert.id] || ""}
+                      onChange={(e) => {
+                        const officer = e.target.value;
+                        setAssignedOfficers(prev => ({ ...prev, [selectedAlert.id]: officer }));
+                      }}
+                      style={{
+                        background: 'rgba(10,22,40,0.95)',
+                        border: '1px solid rgba(0, 240, 255, 0.25)',
+                        borderRadius: 6,
+                        color: '#00f0ff',
+                        fontSize: 11,
+                        padding: '4px 8px',
+                        fontFamily: 'inherit',
+                        outline: 'none',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <option value="">-- Assign Officer --</option>
+                      {KSP_OFFICERS.map(o => (
+                        <option key={o} value={o}>{o}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
               {/* TIMELINE */}
               <div className="bg-black/15 p-3.5 rounded-lg border border-white/5 text-slate-300">
                 <span className="text-slate-500 uppercase tracking-wider text-[9px] block mb-2.5">Alert Response Stepper</span>
@@ -688,10 +742,10 @@ export default function AlertsPage() {
                 <ChevronRight size={12} /> {escalated.has(selectedAlert.id) ? 'Escalated Critical' : 'Escalate Alert'}
               </button>
               <button
-                className="cyber-btn flex-1 justify-center py-2.5 text-xs font-bold bg-slate-900 border border-red-500/20 text-red-400 hover:bg-red-500/10"
+                className="cyber-btn flex-1 justify-center py-2.5 text-xs font-bold bg-[#10b981]/10 border border-[#10b981]/30 text-[#10b981] hover:bg-[#10b981]/20"
                 onClick={(e) => handleCloseAlert(selectedAlert.id, e)}
               >
-                <Trash2 size={12} /> Close Alert
+                <CheckCircle size={12} /> Mark Resolved
               </button>
             </div>
           </div>
