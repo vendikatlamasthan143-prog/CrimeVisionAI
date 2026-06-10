@@ -22,6 +22,58 @@
   --text-secondary: #cbd5e1;
   --text-muted: #94a3b8;
   --text-dim: #64748b;
+  --grid-line: rgba(0, 240, 255, 0.025);
+  --sidebar-bg: rgba(2, 6, 23, 0.98);
+  --topbar-bg: rgba(2, 6, 23, 0.95);
+  --glass-card-border: rgba(0, 240, 255, 0.14);
+  --glass-card-border-hover: rgba(0, 240, 255, 0.35);
+  --glass-card-shadow-hover: rgba(0, 240, 255, 0.08);
+
+  /* Font scale defaults */
+  --font-base: 16px;
+  --font-card-title: 20px;
+  --font-section-title: 24px;
+  --font-page-title: 32px;
+  --font-label: 15px;
+}
+
+html.light {
+  --cyber-bg: #F8FAFC;
+  --cyber-surface: #FFFFFF;
+  --cyber-card: #FFFFFF;
+  --cyber-card-hover: #F1F5F9;
+  --cyber-border: #E2E8F0;
+  --cyber-border-hover: #CBD5E1;
+  --cyber-cyan: #0284C7; /* Sky Blue primary */
+  --cyber-blue: #0284C7;
+  --cyber-purple: #7C3AED;
+  --cyber-magenta: #DB2777;
+  --cyber-amber: #D97706;
+  --cyber-red: #EF4444;
+  --cyber-green: #10B981;
+  --cyber-orange: #EA580C;
+  --text-primary: #0F172A;
+  --text-secondary: #334155;
+  --text-muted: #475569;
+  --text-dim: #64748b;
+  --grid-line: rgba(2, 132, 199, 0.03);
+  --sidebar-bg: #FFFFFF;
+  --topbar-bg: #FFFFFF;
+  --glass-card-border: #E2E8F0;
+  --glass-card-border-hover: #CBD5E1;
+  --glass-card-shadow-hover: rgba(2, 132, 199, 0.04);
+}
+
+body.presentation-mode {
+  --font-base: 20px; /* 1.25x scaling */
+  --font-card-title: 25px;
+  --font-section-title: 30px;
+  --font-page-title: 40px;
+  --font-label: 19px;
+}
+
+body.presentation-mode .presentation-hidden {
+  display: none !important;
 }
 
 * {
@@ -35,7 +87,7 @@ html, body {
   color: var(--text-primary);
   font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
   overflow-x: hidden;
-  font-size: 16px;
+  font-size: var(--font-base);
   line-height: 1.6;
 }
 
@@ -51,10 +103,10 @@ html, body {
    BACKGROUNDS
 ───────────────────────────────────────────── */
 .cyber-grid {
-  background-color: #020617;
+  background-color: var(--cyber-bg);
   background-image:
-    linear-gradient(rgba(0, 240, 255, 0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 240, 255, 0.025) 1px, transparent 1px);
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
   background-size: 48px 48px;
 }
 
@@ -62,23 +114,23 @@ html, body {
    GLASSMORPHISM CARDS — HIGHER OPACITY
 ───────────────────────────────────────────── */
 .glass-card {
-  background: rgba(10, 22, 40, 0.88);
+  background: var(--cyber-card);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(0, 240, 255, 0.14);
+  border: 1px solid var(--glass-card-border);
   border-radius: 14px;
   transition: all 0.3s ease;
 }
 
 .glass-card:hover {
-  border-color: rgba(0, 240, 255, 0.35);
-  box-shadow: 0 0 28px rgba(0, 240, 255, 0.08), 0 8px 32px rgba(0, 0, 0, 0.4);
-  background: rgba(12, 28, 52, 0.92);
+  border-color: var(--glass-card-border-hover);
+  box-shadow: 0 0 28px var(--glass-card-shadow-hover), 0 8px 32px rgba(0, 0, 0, 0.15);
+  background: var(--cyber-card-hover);
 }
 
 .glass-card-solid {
-  background: rgba(10, 22, 40, 0.96);
-  border: 1px solid rgba(0, 240, 255, 0.14);
+  background: var(--cyber-surface);
+  border: 1px solid var(--glass-card-border);
   border-radius: 14px;
 }
 
@@ -408,21 +460,21 @@ html, body {
 }
 
 .section-title {
-  font-size: 16px;
+  font-size: var(--font-section-title);
   font-weight: 700;
   color: var(--text-primary);
   letter-spacing: 0.02em;
 }
 
 .page-title {
-  font-size: 22px;
+  font-size: var(--font-page-title);
   font-weight: 800;
   color: var(--text-primary);
   letter-spacing: -0.01em;
 }
 
 .page-subtitle {
-  font-size: 14px;
+  font-size: var(--font-label);
   color: var(--text-secondary);
   margin-top: 4px;
 }
@@ -966,31 +1018,31 @@ html, body {
    Body: 16px, Labels: 15px, Cards: 20px, Sections: 24px, Titles: 32px
 ───────────────────────────────────────────── */
 body, p, span, td, th, input, select, textarea, button {
-  font-size: 16px; /* Body text */
+  font-size: var(--font-base); /* Body text */
 }
 
 /* Card titles */
 .card-title, .glass-card h3, .glass-card .section-title {
-  font-size: 20px !important;
+  font-size: var(--font-card-title) !important;
 }
 
 /* Section titles */
 .section-title, .section-header .section-title {
-  font-size: 24px !important;
+  font-size: var(--font-section-title) !important;
 }
 
 /* Dashboard & Page titles */
 .page-title {
-  font-size: 32px !important;
+  font-size: var(--font-page-title) !important;
 }
 
 /* Labels */
 label, .label, .cyber-label, .metric-label, .sidebar-section-label {
-  font-size: 15px !important;
+  font-size: var(--font-label) !important;
 }
 
 .glass-card, .card-content, .card {
-  font-size: 16px !important;
+  font-size: var(--font-base) !important;
 }
 
 /* Prevent CSS Grid items from expanding beyond parent boundaries (fixes Recharts size blowouts) */
@@ -1017,4 +1069,56 @@ body {
   width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+/* ─────────────────────────────────────────────
+   RESPONSIVE SIDEBAR & LAYOUT FIXES
+───────────────────────────────────────────── */
+@media (max-width: 1023px) {
+  /* Hide sidebar offscreen by default on mobile/tablet */
+  aside.fixed.left-0.top-0 {
+    left: -280px !important;
+    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: none;
+  }
+
+  /* When open, slide in the sidebar */
+  body.sidebar-open aside.fixed.left-0.top-0 {
+    left: 0 !important;
+    box-shadow: 10px 0 30px rgba(0, 0, 0, 0.5);
+  }
+
+  /* Reset layout paddings and positions */
+  main.flex-1 {
+    padding-left: 0 !important;
+  }
+
+  header.fixed.top-0.right-0 {
+    left: 0 !important;
+  }
+
+  /* Backdrop overlay for closing the sidebar on click */
+  .mobile-sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 6, 23, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 45; /* Just below sidebar (z-50) */
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+
+  body.sidebar-open .mobile-sidebar-overlay {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .hamburger-btn {
+    display: flex !important;
+  }
+}
+
+.hamburger-btn {
+  display: none;
 }

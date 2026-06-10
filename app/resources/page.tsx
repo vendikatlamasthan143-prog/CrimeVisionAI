@@ -341,58 +341,60 @@ export default function ResourcesPage() {
             EXPORT TABLE
           </button>
         </div>
-        <table className="cyber-table">
-          <thead>
-            <tr>
-              <th>District</th>
-              <th>Total Officers</th>
-              <th>Patrol Deployed</th>
-              <th>Cyber Units</th>
-              <th>Detectives</th>
-              <th>Coverage Score</th>
-            </tr>
-          </thead>
-          <tbody>
-            {DISTRICT_RESOURCES.map((d, i) => (
-              <tr key={i}>
-                <td>
-                  <div className="flex items-center gap-2">
-                    <MapPin size={12} style={{ color: '#64748b' }} />
-                    <span style={{ color: '#f1f5f9', fontWeight: 600 }}>{d.district}</span>
-                  </div>
-                </td>
-                <td style={{ color: '#cbd5e1' }}>{d.totalOfficers.toLocaleString()}</td>
-                <td style={{ color: '#cbd5e1' }}>{d.deployedPatrol.toLocaleString()}</td>
-                <td>
-                  <span style={{ color: '#8b5cf6', fontWeight: 700 }}>{d.cyberUnits}</span>
-                </td>
-                <td style={{ color: '#cbd5e1' }}>{d.detectives}</td>
-                <td>
-                  <div className="flex items-center gap-2">
-                    <div className="risk-bar-track" style={{ width: 80 }}>
-                      <div
-                        className="risk-bar-fill"
-                        style={{
-                          width: `${d.coverage}%`,
-                          background: d.coverage >= 80 ? '#10b981' : d.coverage >= 60 ? '#f59e0b' : '#ef4444',
-                        }}
-                      />
-                    </div>
-                    <span
-                      style={{
-                        color: d.coverage >= 80 ? '#10b981' : d.coverage >= 60 ? '#f59e0b' : '#ef4444',
-                        fontWeight: 700,
-                        fontSize: '13px',
-                      }}
-                    >
-                      {d.coverage}%
-                    </span>
-                  </div>
-                </td>
+        <div className="table-container">
+          <table className="cyber-table">
+            <thead>
+              <tr>
+                <th>District</th>
+                <th>Total Officers</th>
+                <th>Patrol Deployed</th>
+                <th>Cyber Units</th>
+                <th>Detectives</th>
+                <th>Coverage Score</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {DISTRICT_RESOURCES.map((d, i) => (
+                <tr key={i}>
+                  <td>
+                    <div className="flex items-center gap-2">
+                      <MapPin size={12} style={{ color: '#64748b' }} />
+                      <span style={{ color: '#f1f5f9', fontWeight: 600 }}>{d.district}</span>
+                    </div>
+                  </td>
+                  <td style={{ color: '#cbd5e1' }}>{d.totalOfficers.toLocaleString()}</td>
+                  <td style={{ color: '#cbd5e1' }}>{d.deployedPatrol.toLocaleString()}</td>
+                  <td>
+                    <span style={{ color: '#8b5cf6', fontWeight: 700 }}>{d.cyberUnits}</span>
+                  </td>
+                  <td style={{ color: '#cbd5e1' }}>{d.detectives}</td>
+                  <td>
+                    <div className="flex items-center gap-2">
+                      <div className="risk-bar-track" style={{ width: 80 }}>
+                        <div
+                          className="risk-bar-fill"
+                          style={{
+                            width: `${d.coverage}%`,
+                            background: d.coverage >= 80 ? '#10b981' : d.coverage >= 60 ? '#f59e0b' : '#ef4444',
+                          }}
+                        />
+                      </div>
+                      <span
+                        style={{
+                          color: d.coverage >= 80 ? '#10b981' : d.coverage >= 60 ? '#f59e0b' : '#ef4444',
+                          fontWeight: 700,
+                          fontSize: '13px',
+                        }}
+                      >
+                        {d.coverage}%
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

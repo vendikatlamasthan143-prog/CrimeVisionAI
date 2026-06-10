@@ -1,24 +1,15 @@
 'use client';
-// ─────────────────────────────────────────────────────────────────────────────
-// Save this file to: app/investigator/page.tsx  (REPLACE existing file entirely)
-// CrimeVision AI — Real Claude API Chat (Direct Browser Fetch)
-// Uses claude-sonnet-4-6, multi-turn history, voice input, PDF download
-// IMPORTANT: Static export site — NO API route handlers. Direct fetch only.
-// ─────────────────────────────────────────────────────────────────────────────
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   MessageSquare, Send, Sparkles, Brain, ChevronRight,
   AlertTriangle, FileDown, Mic, MicOff, X, Clock,
   Copy, Check, Download, Trash2, Radio, Activity, Settings,
+  Maximize2, Minimize2, Plus
 } from 'lucide-react';
 import { useLanguage } from '@/components/LanguageToggle';
-import { SUMMARY_METRICS, TOP_SUSPECTS, RECENT_FIRS, DISTRICTS } from '@/lib/crimeData';
-import {
-  getAnthropicApiKey, setAnthropicApiKey, hasAnthropicApiKey, clearAnthropicApiKey,
-  getGeminiApiKey, setGeminiApiKey, hasGeminiApiKey, clearGeminiApiKey,
-  getActiveProvider, getActiveApiKey, hasAnyApiKey
-} from '@/lib/apiKey';
+import { SUMMARY_METRICS } from '@/lib/crimeData';
+import { getActiveApiKey, hasAnyApiKey, getActiveProvider } from '@/lib/apiKey';
 import { generateTextStream } from '@/lib/aiService';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -32,9 +23,15 @@ interface Message {
   isError?: boolean;
 }
 
+interface ChatSession {
+  id: string;
+  title: string;
+  messages: Message[];
+}
+
 // ─── System Prompt ────────────────────────────────────────────────────────────
 
-const SYSTEM_PROMPT = `You are CrimeNet AI, the official AI intelligence assistant for Karnataka State Police (KSP), India. You are embedded in CrimeVision AI v5.0 — the state's advanced crime analytics command platform used by DGP, Commissioners, and Inspectors.
+const SYSTEM_PROMPT = `You are CrimeNet AI, the official AI intelligence assistant for Karnataka State Police (KSP), India. You are embedded in CrimeVision AI v6.0 — the state's advanced crime analytics command platform used by DGP, Commissioners, and Inspectors.
 
 You have direct access to the KSP crime intelligence database containing:
 - 82,089 total crime records across all 31 Karnataka districts (Jan 2024 – Jun 2025)
@@ -83,16 +80,10 @@ RESPONSE STYLE RULES:
 // ─── Suggested Queries ────────────────────────────────────────────────────────
 
 const SUGGESTED_QUERIES = [
-  { label: 'Show cybercrime hotspots in Karnataka', icon: '💻', category: 'Districts' },
-  { label: 'Which district has the highest crime rate?', icon: '📍', category: 'Districts' },
-  { label: 'Analyze Suresh Nayak suspect profile', icon: '🎯', category: 'Suspects' },
-  { label: 'Find narcotics trafficking networks', icon: '💊', category: 'Suspects' },
-  { label: 'Generate threat assessment for Bengaluru Urban', icon: '🔴', category: 'Intelligence' },
-  { label: 'Show current anomaly spikes across districts', icon: '⚠️', category: 'Anomalies' },
-  { label: 'Predict crime hotspots for next 30 days', icon: '🔮', category: 'Prediction' },
-  { label: 'What FIRs are linked to Kalaburagi narcotics?', icon: '📋', category: 'FIRs' },
-  { label: 'Recommend resource deployment for Raichur', icon: '🚔', category: 'Operations' },
-  { label: 'Show organized crime networks in Ballari', icon: '🕸️', category: 'Intelligence' },
+  { label: 'Show cybercrime hotspots in Karnataka', icon: '💻', desc: 'OTP phishing and fraud spikes' },
+  { label: 'Analyze Suresh Nayak suspect profile', icon: '🎯', desc: 'Sand mining and narcotics kingpin' },
+  { label: 'Find narcotics trafficking networks', icon: '💊', desc: 'Active routes and linked profiles' },
+  { label: 'Show current anomaly spikes across districts', icon: '⚠️', desc: 'Activity spikes and unusual volumes' },
 ];
 
 // ─── Welcome Message ──────────────────────────────────────────────────────────
@@ -110,9 +101,8 @@ I can help you with:
 • **District intelligence** — hotspots, trend forecasts, deployment recommendations
 • **FIR status** — active cases, investigation updates, linked suspects
 • **Anomaly alerts** — current spikes, early warning signals
-• **Strategic reports** — threat assessments, resource allocation guidance
 
-Type your query or click a suggested question to begin.`,
+Type your query or click a suggested question below to begin.`,
   timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
 };
 
@@ -122,24 +112,24 @@ function RenderMarkdown({ text }: { text: string }) {
   if (!text) return null;
   const lines = text.split('\n');
   return (
-    <div style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.75 }}>
+    <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.75 }}>
       {lines.map((line, i) => {
         if (line.startsWith('## ')) {
-          return <div key={i} style={{ fontSize: 14, fontWeight: 800, color: '#00f0ff', marginTop: 14, marginBottom: 4, letterSpacing: '0.03em' }}>{line.slice(3)}</div>;
+          return <div key={i} style={{ fontSize: 14, fontWeight: 800, color: 'var(--cyber-cyan)', marginTop: 14, marginBottom: 4, letterSpacing: '0.03em' }}>{line.slice(3)}</div>;
         }
         if (line.startsWith('# ')) {
-          return <div key={i} style={{ fontSize: 15, fontWeight: 800, color: '#f59e0b', marginTop: 16, marginBottom: 6, letterSpacing: '0.04em' }}>{line.slice(2)}</div>;
+          return <div key={i} style={{ fontSize: 15, fontWeight: 800, color: 'var(--cyber-amber)', marginTop: 16, marginBottom: 6, letterSpacing: '0.04em' }}>{line.slice(2)}</div>;
         }
         if (line.startsWith('• ') || line.startsWith('- ')) {
-          const content = line.slice(2).replace(/\*\*(.*?)\*\*/g, '<strong style="color:#e2e8f0;font-weight:700">$1</strong>');
+          const content = line.slice(2).replace(/\*\*(.*?)\*\*/g, '<strong style="color:var(--text-primary);font-weight:700">$1</strong>');
           return (
             <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 4 }}>
-              <span style={{ color: '#00f0ff', marginTop: 2, flexShrink: 0 }}>•</span>
+              <span style={{ color: 'var(--cyber-cyan)', marginTop: 2, flexShrink: 0 }}>•</span>
               <span dangerouslySetInnerHTML={{ __html: content }} />
             </div>
           );
         }
-        const rendered = line.replace(/\*\*(.*?)\*\*/g, '<strong style="color:#e2e8f0;font-weight:700">$1</strong>');
+        const rendered = line.replace(/\*\*(.*?)\*\*/g, '<strong style="color:var(--text-primary);font-weight:700">$1</strong>');
         return <div key={i} dangerouslySetInnerHTML={{ __html: rendered || '&nbsp;' }} />;
       })}
     </div>
@@ -150,30 +140,54 @@ function RenderMarkdown({ text }: { text: string }) {
 
 export default function InvestigatorPage() {
   const { t, lang } = useLanguage();
-  const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [activeSessionId, setActiveSessionId] = useState<string>('');
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isVoiceActive, setIsVoiceActive] = useState(false);
   const [voiceSupported, setVoiceSupported] = useState(false);
   const [apiKeyMissing, setApiKeyMissing] = useState(false);
   const [showKeyManager, setShowKeyManager] = useState(false);
-  const [customAnthropicKey, setCustomAnthropicKey] = useState('');
   const [customGeminiKey, setCustomGeminiKey] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [history, setHistory] = useState<string[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [isFullScreen, setIsFullScreen] = useState(false);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const recognitionRef = useRef<{ stop: () => void } | null>(null);
 
-  // Check API key on mount
+  // Load chat sessions from localStorage on mount
   useEffect(() => {
-    setApiKeyMissing(!hasAnyApiKey());
+    const provider = getActiveProvider();
+    const hasKey = provider === 'gemini' ? !!localStorage.getItem('ksp_gemini_api_key') : true;
+    setApiKeyMissing(!hasKey);
     if (typeof window !== 'undefined') {
-      setCustomAnthropicKey(localStorage.getItem('ksp_anthropic_api_key') || '');
       setCustomGeminiKey(localStorage.getItem('ksp_gemini_api_key') || '');
+      
+      try {
+        const stored = localStorage.getItem('ksp_chat_sessions');
+        if (stored) {
+          const parsed = JSON.parse(stored) as ChatSession[];
+          if (parsed.length > 0) {
+            setSessions(parsed);
+            setActiveSessionId(parsed[0].id);
+            return;
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+
+      // Default initial session
+      const initId = `session-${Date.now()}`;
+      const initSession: ChatSession = {
+        id: initId,
+        title: 'New Investigation',
+        messages: [WELCOME_MESSAGE],
+      };
+      setSessions([initSession]);
+      setActiveSessionId(initId);
     }
   }, []);
 
@@ -185,40 +199,95 @@ export default function InvestigatorPage() {
     }
   }, []);
 
+  // Get active session messages
+  const activeSession = sessions.find(s => s.id === activeSessionId);
+  const currentMessages = activeSession ? activeSession.messages : [WELCOME_MESSAGE];
+
+  const updateSessionMessages = useCallback((newMessages: Message[]) => {
+    setSessions(prev => {
+      const next = prev.map(s => {
+        if (s.id === activeSessionId) {
+          // Auto title from first user message if title is default
+          let title = s.title;
+          if (title === 'New Investigation') {
+            const userMsg = newMessages.find(m => m.role === 'user');
+            if (userMsg) {
+              title = userMsg.content.length > 22
+                ? userMsg.content.substring(0, 22) + '...'
+                : userMsg.content;
+            }
+          }
+          return { ...s, title, messages: newMessages };
+        }
+        return s;
+      });
+      try {
+        localStorage.setItem('ksp_chat_sessions', JSON.stringify(next));
+      } catch (e) {
+        // ignore
+      }
+      return next;
+    });
+  }, [activeSessionId]);
+
   // Auto-scroll
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [currentMessages]);
 
-  // URL query param auto-send
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const q = new URLSearchParams(window.location.search).get('query');
-      if (q) handleSend(q);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Grouping Sessions for history
+  const getGroupedSessions = () => {
+    const today: ChatSession[] = [];
+    const yesterday: ChatSession[] = [];
+    const older: ChatSession[] = [];
 
-  // ── Main send (direct Anthropic Claude API) ──────────────────────────────
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const startOfYesterday = startOfToday - 24 * 60 * 60 * 1000;
 
+    sessions.forEach(s => {
+      const idParts = s.id.split('-');
+      const timestamp = idParts.length > 1 ? parseInt(idParts[1]) : Date.now();
+      
+      if (timestamp >= startOfToday) {
+        today.push(s);
+      } else if (timestamp >= startOfYesterday) {
+        yesterday.push(s);
+      } else {
+        older.push(s);
+      }
+    });
+
+    return { today, yesterday, older };
+  };
+
+  const { today, yesterday, older } = getGroupedSessions();
+
+  // Handle send prompt
   const handleSend = useCallback(async (textToSend: string) => {
     const text = textToSend.trim();
     if (!text || isLoading) return;
-    const activeKey = getActiveApiKey();
-    if (!activeKey) { setApiKeyMissing(true); return; }
+
+    // Only require a client key if the active provider is gemini.
+    // Anthropic is server-side proxied.
+    const provider = getActiveProvider();
+    if (provider === 'gemini' && !getActiveApiKey()) {
+      setApiKeyMissing(true);
+      return;
+    }
 
     const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const userMsg: Message = { id: `u-${Date.now()}`, role: 'user', content: text, timestamp };
     const aiId = `a-${Date.now()}`;
     const aiMsg: Message = { id: aiId, role: 'assistant', content: '', timestamp, isStreaming: true };
 
-    setMessages(prev => [...prev, userMsg, aiMsg]);
+    const newMessages = [...currentMessages, userMsg, aiMsg];
+    updateSessionMessages(newMessages);
     setInput('');
     setIsLoading(true);
-    setHistory(prev => [text, ...prev.filter(q => q !== text)].slice(0, 6));
 
-    // Build conversation history for API (last 10 messages)
-    const historyForAPI = [...messages.slice(-10), userMsg]
+    // Build chat history for API
+    const historyForAPI = newMessages.slice(0, -1)
       .filter(m => m.id !== 'welcome')
       .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
 
@@ -232,29 +301,52 @@ export default function InvestigatorPage() {
         signal: abortRef.current.signal,
         onChunk: (textChunk) => {
           fullText += textChunk;
-          setMessages(prev =>
-            prev.map(m => m.id === aiId ? { ...m, content: fullText } : m)
-          );
+          updateSessionMessages([
+            ...newMessages.slice(0, -1),
+            { ...aiMsg, content: fullText }
+          ]);
         }
       });
 
-      setMessages(prev =>
-        prev.map(m => m.id === aiId ? { ...m, content: fullText || 'No response generated.', isStreaming: false } : m)
-      );
+      updateSessionMessages([
+        ...newMessages.slice(0, -1),
+        { ...aiMsg, content: fullText || 'No response generated.', isStreaming: false }
+      ]);
     } catch (err) {
-      const errMsg = (err as Error).name === 'AbortError'
-        ? '⏹ Response stopped by user.'
-        : `⚠️ Error: ${(err as Error).message}`;
-      setMessages(prev =>
-        prev.map(m => m.id === aiId ? { ...m, content: errMsg, isStreaming: false, isError: (err as Error).name !== 'AbortError' } : m)
-      );
+      const isConnectionError = (err as Error).message.includes('Failed to fetch') || 
+                                (err as Error).message.includes('Proxy Error') ||
+                                (err as Error).message.includes('unreachable');
+      let errMsg = '';
+      if ((err as Error).name === 'AbortError') {
+        errMsg = '⏹ Response stopped by investigator.';
+      } else if (isConnectionError) {
+        errMsg = `⚠️ CrimeNet Intelligence Server Offline: The Zoho Catalyst serverless backend is currently unreachable. Please make sure the Catalyst function is deployed and running, and that your ANTHROPIC_API_KEY environment variable is configured.`;
+      } else {
+        errMsg = `⚠️ Intelligence Assistant Error: ${(err as Error).message}`;
+      }
+      updateSessionMessages([
+        ...newMessages.slice(0, -1),
+        { ...aiMsg, content: errMsg, isStreaming: false, isError: (err as Error).name !== 'AbortError' }
+      ]);
     } finally {
       setIsLoading(false);
     }
-  }, [isLoading, apiKeyMissing, messages]);
+  }, [isLoading, currentMessages, updateSessionMessages]);
 
-  // ── Voice input ───────────────────────────────────────────────────────────
+  // Handle retry query on failure
+  const handleRetry = useCallback(() => {
+    const userMsg = [...currentMessages].reverse().find(m => m.role === 'user');
+    if (userMsg) {
+      const index = currentMessages.findIndex(m => m.id === currentMessages[currentMessages.length - 1].id);
+      if (index >= 0) {
+        const cleaned = currentMessages.slice(0, index);
+        updateSessionMessages(cleaned);
+        handleSend(userMsg.content);
+      }
+    }
+  }, [currentMessages, updateSessionMessages, handleSend]);
 
+  // Voice recording
   const handleVoice = useCallback(() => {
     if (!voiceSupported) return;
 
@@ -307,8 +399,7 @@ export default function InvestigatorPage() {
     recognition.start();
   }, [voiceSupported, isVoiceActive, lang, handleSend]);
 
-  // ── PDF export ────────────────────────────────────────────────────────────
-
+  // PDF Download transcript
   const handleDownloadPDF = async () => {
     const script = document.createElement('script');
     script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
@@ -336,7 +427,7 @@ export default function InvestigatorPage() {
     let y = 20;
 
     // Header
-    doc.setFontSize(14); doc.setTextColor(0, 100, 150);
+    doc.setFontSize(14); doc.setTextColor(0, 132, 199);
     doc.setFont('helvetica', 'bold');
     doc.text('KARNATAKA STATE POLICE — RESTRICTED', pageW / 2, y, { align: 'center' });
     y += 8;
@@ -350,7 +441,7 @@ export default function InvestigatorPage() {
     y += 8;
 
     // Messages
-    for (const msg of messages) {
+    for (const msg of currentMessages) {
       if (msg.id === 'welcome') continue;
       const prefix = msg.role === 'user' ? 'OFFICER QUERY' : 'CrimeNet AI RESPONSE';
       const color: [number, number, number] = msg.role === 'user' ? [0, 80, 160] : [0, 120, 80];
@@ -358,7 +449,7 @@ export default function InvestigatorPage() {
       doc.text(`[${prefix}] ${msg.timestamp}`, 15, y);
       y += 5;
       doc.setFont('helvetica', 'normal'); doc.setTextColor(40, 40, 40); doc.setFontSize(9);
-      const lines = doc.splitTextToSize(msg.content.replace(/\*\*/g, '').replace(/##? /g, ''), pageW - 30) as string[];
+      const lines = doc.splitTextToSize(msg.content.replace(/\*\//g, '').replace(/##? /g, ''), pageW - 30) as string[];
       for (const line of lines) {
         if (y > 270) { doc.addPage(); y = 20; }
         doc.text(line, 15, y);
@@ -368,215 +459,354 @@ export default function InvestigatorPage() {
       if (y > 260) { doc.addPage(); y = 20; }
     }
 
-    // Footer
-    if (y > 265) { doc.addPage(); y = 20; }
     doc.line(15, y, pageW - 15, y); y += 6;
     doc.setFontSize(8); doc.setTextColor(120, 120, 120); doc.setFont('helvetica', 'normal');
-    doc.text('CrimeVision AI v5.0 | KSP Datathon 2026 | Karnataka State Police | RESTRICTED', pageW / 2, y, { align: 'center' });
+    doc.text('CrimeVision AI v6.0 | KSP Datathon 2026 | Karnataka State Police', pageW / 2, y, { align: 'center' });
 
-    doc.save(`CrimeNet_Session_${Date.now()}.pdf`);
+    doc.save(`CrimeNet_Transcript_${Date.now()}.pdf`);
   };
-
-  // ── Utility ───────────────────────────────────────────────────────────────
 
   const handleCopy = async (content: string, id: string) => {
     await navigator.clipboard.writeText(content);
     setCopiedId(id); setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const handleClear = () => { setMessages([WELCOME_MESSAGE]); setHistory([]); };
+  // Create new session
+  const handleNewChat = () => {
+    const newId = `session-${Date.now()}`;
+    const newSession: ChatSession = {
+      id: newId,
+      title: 'New Investigation',
+      messages: [WELCOME_MESSAGE],
+    };
+    setSessions(prev => {
+      const next = [newSession, ...prev];
+      try { localStorage.setItem('ksp_chat_sessions', JSON.stringify(next)); } catch {}
+      return next;
+    });
+    setActiveSessionId(newId);
+  };
+
+  // Delete chat session
+  const handleDeleteSession = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSessions(prev => {
+      const next = prev.filter(s => s.id !== id);
+      if (id === activeSessionId) {
+        if (next.length > 0) {
+          setActiveSessionId(next[0].id);
+        } else {
+          const newId = `session-${Date.now()}`;
+          const newSession: ChatSession = {
+            id: newId,
+            title: 'New Investigation',
+            messages: [WELCOME_MESSAGE],
+          };
+          next.push(newSession);
+          setActiveSessionId(newId);
+        }
+      }
+      try { localStorage.setItem('ksp_chat_sessions', JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
+
+  // Clear active session
+  const handleClear = () => {
+    updateSessionMessages([WELCOME_MESSAGE]);
+  };
+
   const handleStop = () => abortRef.current?.abort();
 
-  const categories = ['All', ...Array.from(new Set(SUGGESTED_QUERIES.map(q => q.category)))];
-  const filteredQueries = selectedCategory === 'All' ? SUGGESTED_QUERIES : SUGGESTED_QUERIES.filter(q => q.category === selectedCategory);
+  // Show suggested prompt chips grid only on clean chat session (only welcome message)
+  const isCleanChat = currentMessages.length === 1 && currentMessages[0].id === 'welcome';
 
-  // ─── Render ───────────────────────────────────────────────────────────────
+  // Session rendering block helper
+  const renderSessionItem = (s: ChatSession) => {
+    const isActive = s.id === activeSessionId;
+    return (
+      <div
+        key={s.id}
+        onClick={() => setActiveSessionId(s.id)}
+        className="flex items-center justify-between px-3 py-2 rounded-lg border transition-all cursor-pointer group"
+        style={{
+          background: isActive ? 'rgba(0,240,255,0.06)' : 'transparent',
+          borderColor: isActive ? 'var(--cyber-cyan)' : 'transparent',
+        }}
+        onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; }}
+        onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <MessageSquare size={13} className={isActive ? 'text-[var(--cyber-cyan)]' : 'text-[var(--text-dim)]'} />
+          <span className={`text-xs truncate font-bold ${isActive ? 'text-[var(--cyber-cyan)]' : 'text-[var(--text-muted)]'}`}>
+            {s.title}
+          </span>
+        </div>
+        {sessions.length > 1 && (
+          <button
+            onClick={(e) => handleDeleteSession(s.id, e)}
+            title="Delete Session"
+            className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-[var(--text-dim)] hover:text-red-500 hover:bg-red-500/5 cursor-pointer"
+          >
+            <X size={12} />
+          </button>
+        )}
+      </div>
+    );
+  };
 
   return (
-    <div style={{ padding: 24, minHeight: '100vh', display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div style={{ padding: 24, minHeight: 'calc(100vh - 64px)', display: 'flex', gap: 20, alignItems: 'stretch' }}>
+      
+      {/* Dynamic CSS override for fullscreen mode */}
+      {isFullScreen && (
+        <style>{`
+          aside.fixed.left-0.top-0 {
+            display: none !important;
+          }
+          main.flex-1 {
+            padding-left: 0 !important;
+          }
+        `}</style>
+      )}
 
-      {/* ── Page Header ───────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{
-            width: 44, height: 44, borderRadius: 12,
-            background: 'rgba(0,240,255,0.12)', border: '1px solid rgba(0,240,255,0.3)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 0 20px rgba(0,240,255,0.15)',
-          }}>
-            <Brain size={22} color="#00f0ff" />
-          </div>
-          <div>
-            <h1 style={{ fontSize: 20, fontWeight: 900, color: '#f1f5f9', letterSpacing: '0.03em', margin: 0 }}>
-              {t.page_investigator}
-            </h1>
-            <p style={{ fontSize: 12, color: '#64748b', margin: 0, marginTop: 2 }}>
-              {t.sub_investigator}
-            </p>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {/* API status */}
-          <button onClick={() => setShowKeyManager(prev => !prev)}
-            title="Configure AI API Keys"
+      {/* ── Left Sidebar (ChatGPT style chat history) ────────────────── */}
+      {!isFullScreen && (
+        <aside
+          className="flex flex-col gap-4 animate-slideInLeft select-none"
+          style={{
+            width: '260px',
+            flexShrink: 0,
+            background: 'var(--cyber-surface)',
+            border: '1px solid var(--cyber-border)',
+            borderRadius: 16,
+            padding: 16,
+          }}
+        >
+          {/* New Chat Button */}
+          <button
+            onClick={handleNewChat}
+            className="w-full py-2.5 px-4 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold transition-all cursor-pointer"
             style={{
-              display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px',
-              borderRadius: 8, border: `1px solid ${apiKeyMissing ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.3)'}`,
-              background: apiKeyMissing ? 'rgba(239,68,68,0.06)' : 'rgba(16,185,129,0.06)',
-              cursor: 'pointer', fontFamily: 'inherit',
-            }}>
-            <div style={{
-              width: 6, height: 6, borderRadius: '50%',
-              background: apiKeyMissing ? '#ef4444' : '#10b981',
-              boxShadow: apiKeyMissing ? '0 0 6px #ef4444' : '0 0 6px #10b981',
-              animation: !apiKeyMissing ? 'pulse 2s infinite' : 'none',
-            }} />
-            <span style={{ fontSize: 10, fontWeight: 700, color: apiKeyMissing ? '#ef4444' : '#10b981', letterSpacing: '0.08em' }}>
-              {apiKeyMissing
-                ? 'AI OFFLINE'
-                : hasGeminiApiKey() && hasAnthropicApiKey()
-                ? 'AI ONLINE (GEMINI + CLAUDE)'
-                : hasGeminiApiKey()
-                ? 'AI ONLINE (GEMINI)'
-                : 'AI ONLINE (CLAUDE)'}
-            </span>
-            <Settings size={10} style={{ color: apiKeyMissing ? '#ef4444' : '#10b981', marginLeft: 2 }} />
+              borderColor: 'var(--cyber-border)',
+              background: 'rgba(0, 240, 255, 0.05)',
+              color: 'var(--cyber-cyan)',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--cyber-cyan)'; e.currentTarget.style.background = 'rgba(0,240,255,0.1)'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--cyber-border)'; e.currentTarget.style.background = 'rgba(0,240,255,0.05)'; }}
+          >
+            <Plus size={14} /> New Investigation
           </button>
 
-          <button onClick={handleDownloadPDF}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px',
-              background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.3)',
-              borderRadius: 8, color: '#a78bfa', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-            <FileDown size={13} /> PDF
-          </button>
-
-          <button onClick={handleClear}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px',
-              background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: 8, color: '#64748b', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-            <Trash2 size={13} /> {t.btn_clear}
-          </button>
-        </div>
-      </div>
-
-      {/* ── API Key Configuration/Warning ──────────────────────────────── */}
-      {(apiKeyMissing || showKeyManager) && (
-        <div style={{
-          padding: '16px 20px', borderRadius: 12, display: 'flex', flexDirection: 'column', gap: 12,
-          background: 'rgba(139,92,246,0.04)', border: '1px solid rgba(139,92,246,0.2)',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-            {apiKeyMissing ? (
-              <AlertTriangle size={18} color="#ef4444" style={{ flexShrink: 0, marginTop: 2 }} />
-            ) : (
-              <Settings size={18} color="#00f0ff" style={{ flexShrink: 0, marginTop: 2 }} />
+          {/* Grouped Chat Sessions History List */}
+          <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+            {/* Today */}
+            {today.length > 0 && (
+              <div className="space-y-1">
+                <div className="text-[10px] font-black tracking-widest text-[var(--text-dim)] uppercase px-2 mb-1">
+                  Today
+                </div>
+                {today.map(renderSessionItem)}
+              </div>
             )}
-            <div>
-              <p style={{ color: apiKeyMissing ? '#ef4444' : '#00f0ff', fontSize: 13, fontWeight: 700, margin: '0 0 4px' }}>
-                {apiKeyMissing ? 'AI API Keys Configuration Required' : 'AI API Keys Settings'}
-              </p>
-              <p style={{ color: '#94a3b8', fontSize: 12, margin: 0, lineHeight: 1.6 }}>
-                CrimeNet AI runs entirely in your browser. Configure either **Google Gemini API** (recommended for hackathon) or **Anthropic Claude API**.
-                Your keys are stored securely in local browser storage and never sent anywhere else.
-              </p>
+
+            {/* Yesterday */}
+            {yesterday.length > 0 && (
+              <div className="space-y-1">
+                <div className="text-[10px] font-black tracking-widest text-[var(--text-dim)] uppercase px-2 mb-1">
+                  Yesterday
+                </div>
+                {yesterday.map(renderSessionItem)}
+              </div>
+            )}
+
+            {/* Older */}
+            {older.length > 0 && (
+              <div className="space-y-1">
+                <div className="text-[10px] font-black tracking-widest text-[var(--text-dim)] uppercase px-2 mb-1">
+                  Previous Conversations
+                </div>
+                {older.map(renderSessionItem)}
+              </div>
+            )}
+          </div>
+
+          {/* Database Info Card */}
+          <div
+            className="p-3.5 rounded-xl border flex flex-col gap-2 bg-slate-900/10"
+            style={{ borderColor: 'var(--cyber-border)' }}
+          >
+            <div className="flex items-center gap-1.5">
+              <Activity size={12} className="text-[var(--cyber-cyan)]" />
+              <span className="text-[10px] font-black text-[var(--text-dim)] uppercase tracking-wider">
+                Platform Context
+              </span>
+            </div>
+            <div className="space-y-1 text-[11px] text-[var(--text-muted)]">
+              <div className="flex justify-between">
+                <span>Database:</span>
+                <span className="font-bold text-[var(--text-primary)]">82,089 FIRs</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Coverage:</span>
+                <span className="font-bold text-[var(--text-primary)]">31 Districts</span>
+              </div>
+              <div className="flex justify-between">
+                <span>AI Core:</span>
+                <span className="font-bold text-green-500">Gemini Active</span>
+              </div>
             </div>
           </div>
-          
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginLeft: 30, maxWidth: 800 }}>
-            {/* Gemini Config */}
-            <div style={{ padding: 12, borderRadius: 10, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#00f0ff', marginBottom: 6 }}>1. Google Gemini Key</div>
+        </aside>
+      )}
+
+      {/* ── Right Panel (Immersive Chat Area) ─────────────────────────── */}
+      <main
+        className="flex-1 flex flex-col overflow-hidden transition-all duration-300"
+        style={{
+          background: 'var(--cyber-surface)',
+          border: '1px solid var(--cyber-border)',
+          borderRadius: 16,
+        }}
+      >
+        {/* Header Controls */}
+        <div
+          className="px-5 py-3 border-b flex justify-between items-center"
+          style={{ borderColor: 'var(--cyber-border)', background: 'rgba(0, 240, 255, 0.02)' }}
+        >
+          <div className="flex items-center gap-2.5">
+            <Brain size={18} className="text-[var(--cyber-cyan)]" />
+            <div>
+              <div className="text-sm font-black text-[var(--text-primary)] tracking-wide">
+                CrimeNet Intelligence Assistant
+              </div>
+              <div className="text-[9px] font-semibold text-[var(--text-dim)] tracking-wider uppercase">
+                Secure Copilot Session
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {isLoading && (
+              <div className="flex items-center gap-1.5 text-[var(--cyber-cyan)] mr-2 animate-pulse">
+                <Radio size={12} />
+                <span className="text-[9px] font-black uppercase tracking-wider">Processing Stream</span>
+              </div>
+            )}
+            
+            {/* Configure Keys Settings */}
+            <button
+              onClick={() => setShowKeyManager(!showKeyManager)}
+              title="Configure Keys"
+              className="p-1.5 rounded-lg border transition-colors cursor-pointer"
+              style={{
+                background: 'rgba(10,22,40,0.1)',
+                borderColor: showKeyManager ? 'var(--cyber-cyan)' : 'var(--cyber-border)',
+                color: showKeyManager ? 'var(--cyber-cyan)' : 'var(--text-muted)',
+              }}
+            >
+              <Settings size={14} />
+            </button>
+
+            {/* Full Screen Toggle */}
+            <button
+              onClick={() => setIsFullScreen(!isFullScreen)}
+              title={isFullScreen ? "Exit Fullscreen Chat" : "Maximize Chat Window"}
+              className="p-1.5 rounded-lg border transition-colors cursor-pointer text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+              style={{
+                background: 'rgba(10,22,40,0.1)',
+                borderColor: 'var(--cyber-border)',
+              }}
+            >
+              {isFullScreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+            </button>
+
+            {/* Clear active session */}
+            <button
+              onClick={handleClear}
+              title="Clear Active Chat"
+              className="p-1.5 rounded-lg border transition-colors cursor-pointer text-[var(--text-muted)] hover:text-red-500"
+              style={{
+                background: 'rgba(10,22,40,0.1)',
+                borderColor: 'var(--cyber-border)',
+              }}
+            >
+              <Trash2 size={14} />
+            </button>
+
+            {/* Export PDF */}
+            <button
+              onClick={handleDownloadPDF}
+              title="Export Conversation"
+              className="px-3 py-1.5 rounded-lg border flex items-center gap-1.5 text-xs font-bold transition-all cursor-pointer"
+              style={{
+                borderColor: 'var(--cyber-border)',
+                background: 'rgba(139,92,246,0.08)',
+                color: '#a78bfa',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = '#a78bfa'; e.currentTarget.style.background = 'rgba(139,92,246,0.15)'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--cyber-border)'; e.currentTarget.style.background = 'rgba(139,92,246,0.08)'; }}
+            >
+              <FileDown size={13} /> Export
+            </button>
+          </div>
+        </div>
+
+        {/* API Settings Manager Overlay */}
+        {(apiKeyMissing || showKeyManager) && (
+          <div
+            className="p-4 border-b space-y-3.5 animate-fadeInUp"
+            style={{
+              borderColor: 'var(--cyber-border)',
+              background: 'rgba(139,92,246,0.02)',
+            }}
+          >
+            <div className="flex items-start gap-2.5">
+              <AlertTriangle size={16} className="text-amber-500 mt-0.5 flex-shrink-0" />
+              <div>
+                <h4 className="text-xs font-bold text-[var(--text-primary)]">Google Gemini API Key Config</h4>
+                <p className="text-[11px] text-[var(--text-muted)] leading-relaxed mt-0.5">
+                  To utilize live AI intelligence, configure your Google Gemini API Key below. This key is saved locally in your browser cache.
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex gap-3 max-w-lg">
               <input
                 type="password"
                 placeholder="AIzaSy... (Gemini Key)"
                 value={customGeminiKey}
                 onChange={e => setCustomGeminiKey(e.target.value)}
+                className="flex-1 py-1.5 px-3 border text-xs text-[var(--text-primary)] outline-none rounded-lg"
                 style={{
-                  width: '100%', padding: '6px 10px', background: 'rgba(10,22,40,0.8)',
-                  border: '1px solid rgba(0,240,255,0.2)', borderRadius: 6,
-                  color: '#f1f5f9', fontSize: 12, outline: 'none', boxSizing: 'border-box', marginBottom: 8
+                  background: 'var(--cyber-bg)',
+                  borderColor: 'var(--cyber-border)',
                 }}
               />
-              <div style={{ display: 'flex', gap: 6 }}>
+              <div className="flex gap-2">
                 <button
                   onClick={() => {
                     if (customGeminiKey.trim()) {
-                      setGeminiApiKey(customGeminiKey);
-                      setApiKeyMissing(!hasAnyApiKey());
+                      localStorage.setItem('ksp_gemini_api_key', customGeminiKey);
+                      setApiKeyMissing(false);
+                      setShowKeyManager(false);
                     } else {
-                      clearGeminiApiKey();
-                      setApiKeyMissing(!hasAnyApiKey());
+                      localStorage.removeItem('ksp_gemini_api_key');
+                      setApiKeyMissing(true);
                     }
                   }}
-                  style={{
-                    padding: '5px 10px', background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)',
-                    borderRadius: 6, color: '#10b981', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit'
-                  }}
+                  className="py-1.5 px-4 rounded-lg bg-green-500/10 border border-green-500/30 text-green-500 text-xs font-bold cursor-pointer hover:bg-green-500/20"
                 >
-                  Save Gemini
+                  Save key
                 </button>
-                {hasGeminiApiKey() && (
+                {localStorage.getItem('ksp_gemini_api_key') && (
                   <button
                     onClick={() => {
-                      clearGeminiApiKey();
+                      localStorage.removeItem('ksp_gemini_api_key');
                       setCustomGeminiKey('');
-                      setApiKeyMissing(!hasAnyApiKey());
+                      setApiKeyMissing(true);
                     }}
-                    style={{
-                      padding: '5px 10px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
-                      borderRadius: 6, color: '#ef4444', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit'
-                    }}
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Anthropic Config */}
-            <div style={{ padding: 12, borderRadius: 10, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#8b5cf6', marginBottom: 6 }}>2. Anthropic Claude Key</div>
-              <input
-                type="password"
-                placeholder="sk-ant-api03... (Claude Key)"
-                value={customAnthropicKey}
-                onChange={e => setCustomAnthropicKey(e.target.value)}
-                style={{
-                  width: '100%', padding: '6px 10px', background: 'rgba(10,22,40,0.8)',
-                  border: '1px solid rgba(0,240,255,0.2)', borderRadius: 6,
-                  color: '#f1f5f9', fontSize: 12, outline: 'none', boxSizing: 'border-box', marginBottom: 8
-                }}
-              />
-              <div style={{ display: 'flex', gap: 6 }}>
-                <button
-                  onClick={() => {
-                    if (customAnthropicKey.trim()) {
-                      setAnthropicApiKey(customAnthropicKey);
-                      setApiKeyMissing(!hasAnyApiKey());
-                    } else {
-                      clearAnthropicApiKey();
-                      setApiKeyMissing(!hasAnyApiKey());
-                    }
-                  }}
-                  style={{
-                    padding: '5px 10px', background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)',
-                    borderRadius: 6, color: '#10b981', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit'
-                  }}
-                >
-                  Save Claude
-                </button>
-                {hasAnthropicApiKey() && (
-                  <button
-                    onClick={() => {
-                      clearAnthropicApiKey();
-                      setCustomAnthropicKey('');
-                      setApiKeyMissing(!hasAnyApiKey());
-                    }}
-                    style={{
-                      padding: '5px 10px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
-                      borderRadius: 6, color: '#ef4444', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit'
-                    }}
+                    className="py-1.5 px-4 rounded-lg bg-red-500/5 border border-red-500/20 text-red-500 text-xs font-bold cursor-pointer hover:bg-red-500/10"
                   >
                     Clear
                   </button>
@@ -584,320 +814,241 @@ export default function InvestigatorPage() {
               </div>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginRight: 10 }}>
-            <button
-              onClick={() => {
-                setShowKeyManager(false);
-                setApiKeyMissing(!hasAnyApiKey());
-              }}
-              style={{
-                padding: '8px 20px', background: 'rgba(0,240,255,0.12)', border: '1px solid rgba(0,240,255,0.3)',
-                borderRadius: 8, color: '#00f0ff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit'
-              }}
-            >
-              Done
-            </button>
-          </div>
-        </div>
-      )}
+        )}
 
-      {/* ── Two-Column Layout ─────────────────────────────────────────── */}
-      <div style={{ display: 'flex', gap: 20, flex: 1, alignItems: 'stretch', minHeight: 600 }}>
+        {/* Message Workspace Area */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-5">
+          {/* Chat bubbles */}
+          {currentMessages.map(msg => {
+            const isAI = msg.role === 'assistant';
+            if (msg.id === 'welcome' && !isCleanChat) return null; // hide welcome when chat has started
 
-        {/* LEFT PANEL ──────────────────────────────────────────────────── */}
-        <div style={{ width: 264, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>
-
-          {/* System Status Card */}
-          <div style={{
-            background: 'rgba(2,6,23,0.85)', border: '1px solid rgba(0,240,255,0.12)',
-            borderRadius: 14, padding: 16,
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-              <Activity size={13} color="#00f0ff" />
-              <span style={{ fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                {t.chat_system_status}
-              </span>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {[
-                { label: 'AI Engine', value: 'Claude Sonnet 4.6', color: '#10b981' },
-                { label: 'Database', value: '82,089 FIRs', color: '#00f0ff' },
-                { label: 'Districts', value: '31 Karnataka', color: '#94a3b8' },
-                { label: 'Accuracy', value: '94.7%', color: '#f59e0b' },
-                { label: 'Active Cases', value: SUMMARY_METRICS.activeCases.toLocaleString(), color: '#ef4444' },
-              ].map(item => (
-                <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                  <span style={{ color: '#64748b' }}>{item.label}</span>
-                  <span style={{ fontWeight: 700, color: item.color }}>{item.value}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Suggested Queries */}
-          <div style={{
-            background: 'rgba(2,6,23,0.85)', border: '1px solid rgba(0,240,255,0.12)',
-            borderRadius: 14, padding: 16, flex: 1, display: 'flex', flexDirection: 'column',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-              <Sparkles size={13} color="#00f0ff" />
-              <span style={{ fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                {t.chat_suggested}
-              </span>
-            </div>
-
-            {/* Category tabs */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 10 }}>
-              {categories.map(cat => (
-                <button key={cat} onClick={() => setSelectedCategory(cat)}
-                  style={{
-                    padding: '2px 8px', borderRadius: 4, fontSize: 9, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-                    border: `1px solid ${selectedCategory === cat ? 'rgba(0,240,255,0.4)' : 'rgba(255,255,255,0.06)'}`,
-                    background: selectedCategory === cat ? 'rgba(0,240,255,0.1)' : 'transparent',
-                    color: selectedCategory === cat ? '#00f0ff' : '#64748b', transition: 'all 0.15s',
-                  }}
-                >{cat}</button>
-              ))}
-            </div>
-
-            <div style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {filteredQueries.map((q, idx) => (
-                <button key={idx} onClick={() => handleSend(q.label)} disabled={isLoading}
-                  style={{
-                    width: '100%', textAlign: 'left', padding: '8px 10px', borderRadius: 8,
-                    border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)',
-                    display: 'flex', alignItems: 'center', gap: 8, cursor: isLoading ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.15s', opacity: isLoading ? 0.5 : 1, fontFamily: 'inherit',
-                  }}
-                  onMouseEnter={e => { if (!isLoading) { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(0,240,255,0.25)'; (e.currentTarget as HTMLButtonElement).style.background = 'rgba(0,240,255,0.04)'; }}}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.05)'; (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.02)'; }}
-                >
-                  <span style={{ fontSize: 13 }}>{q.icon}</span>
-                  <span style={{ fontSize: 11, color: '#94a3b8', flex: 1, lineHeight: 1.3 }}>{q.label}</span>
-                  <ChevronRight size={10} color="#334155" />
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Recent History */}
-          {history.length > 0 && (
-            <div style={{ background: 'rgba(2,6,23,0.85)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 14, padding: 14 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <Clock size={12} color="#64748b" />
-                <span style={{ fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                  {t.chat_recent_queries}
+            return (
+              <div key={msg.id} className={`flex flex-col ${isAI ? 'items-start' : 'items-end'}`}>
+                {/* Header label */}
+                <span className="text-[10px] text-[var(--text-dim)] font-mono mb-1 select-none">
+                  {isAI ? '🤖 CrimeNet AI' : '👮 Officer'} · {msg.timestamp}
                 </span>
+
+                {/* Content Bubble */}
+                <div
+                  className="p-4 border transition-all text-left"
+                  style={{
+                    maxWidth: '85%',
+                    borderRadius: isAI ? '4px 16px 16px 16px' : '16px 4px 16px 16px',
+                    background: isAI
+                      ? msg.isError ? 'rgba(239, 68, 68, 0.05)' : 'var(--cyber-card)'
+                      : 'rgba(0, 240, 255, 0.05)',
+                    borderColor: isAI
+                      ? msg.isError ? 'rgba(239, 68, 68, 0.25)' : 'var(--cyber-border)'
+                      : 'rgba(0, 240, 255, 0.2)',
+                  }}
+                >
+                  {isAI ? (
+                    <>
+                      <RenderMarkdown text={msg.content} />
+                      {msg.isStreaming && (
+                        <div style={{ display: 'flex', gap: 4, marginTop: 8, alignItems: 'center' }}>
+                          {/* Blinking Typing Cursor Indicator */}
+                          <span className="text-xs font-bold text-[var(--cyber-cyan)] animate-cursor-blink select-none">▋</span>
+                          {[0, 1, 2].map(i => (
+                            <div key={i} className="w-1.5 h-1.5 rounded-full bg-[var(--cyber-cyan)]"
+                              style={{ animation: `dotBounce 1.2s ${i * 0.2}s ease-in-out infinite` }} />
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.65 }}>
+                      {msg.content}
+                    </div>
+                  )}
+
+                  {/* Message Options (Copy / Retry) */}
+                  {isAI && !msg.isStreaming && msg.id !== 'welcome' && (
+                    <div className="mt-3 pt-3 border-t flex gap-2" style={{ borderColor: 'var(--cyber-border)' }}>
+                      <button
+                        onClick={() => handleCopy(msg.content, msg.id)}
+                        className="flex items-center gap-1.5 py-1 px-2.5 rounded border text-[11px] font-bold cursor-pointer transition-colors"
+                        style={{
+                          borderColor: 'var(--cyber-border)',
+                          background: 'transparent',
+                          color: copiedId === msg.id ? '#10b981' : 'var(--text-dim)',
+                        }}
+                      >
+                        {copiedId === msg.id ? <Check size={11} /> : <Copy size={11} />}
+                        {copiedId === msg.id ? 'Copied' : 'Copy'}
+                      </button>
+                      {msg.isError && (
+                        <button
+                          onClick={handleRetry}
+                          className="flex items-center gap-1.5 py-1 px-2.5 rounded border text-[11px] font-bold cursor-pointer transition-all hover:bg-red-500/10"
+                          style={{
+                            borderColor: 'rgba(239, 68, 68, 0.4)',
+                            background: 'rgba(239, 68, 68, 0.05)',
+                            color: '#ef4444',
+                          }}
+                        >
+                          <Send size={11} />
+                          <span>Retry Query</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                {history.map((q, i) => (
-                  <button key={i} onClick={() => { setInput(q); inputRef.current?.focus(); }}
-                    style={{ width: '100%', textAlign: 'left', padding: '4px 8px', borderRadius: 6,
-                      background: 'transparent', border: 'none', cursor: 'pointer', color: '#64748b',
-                      fontSize: 11, display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'inherit',
+            );
+          })}
+
+          {/* Suggested prompts grid inside empty chat state */}
+          {isCleanChat && (
+            <div className="py-8 max-w-2xl mx-auto text-center space-y-6 animate-fadeInUp">
+              <div className="inline-flex p-3 rounded-2xl border bg-slate-900/10" style={{ borderColor: 'var(--cyber-border)' }}>
+                <Brain size={32} className="text-[var(--cyber-cyan)] animate-pulse" />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-[var(--text-primary)]">
+                  How can CrimeNet AI assist your investigation today?
+                </h3>
+                <p className="text-xs text-[var(--text-dim)] mt-1.5">
+                  Select a pattern match task below or type a query using police records.
+                </p>
+              </div>
+
+              {/* Grid - styled like modern cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 text-left">
+                {SUGGESTED_QUERIES.map((q, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => handleSend(q.label)}
+                    disabled={isLoading}
+                    className="p-4 rounded-xl border transition-all duration-200 cursor-pointer flex flex-col justify-between"
+                    style={{
+                      background: 'var(--cyber-card)',
+                      borderColor: 'var(--cyber-border)',
                     }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#94a3b8'; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#64748b'; }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--cyber-cyan)'; e.currentTarget.style.background = 'var(--cyber-card-hover)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--cyber-border)'; e.currentTarget.style.background = 'var(--cyber-card)'; }}
                   >
-                    <Clock size={9} />
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{q}</span>
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-lg">{q.icon}</span>
+                      <span className="text-xs font-bold text-[var(--text-primary)]">
+                        {q.label}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-[var(--text-dim)] mt-2">
+                      {q.desc}
+                    </span>
                   </button>
                 ))}
               </div>
             </div>
           )}
+
+          {/* Abort button */}
+          {isLoading && (
+            <div className="flex justify-center select-none pt-2">
+              <button
+                onClick={handleStop}
+                className="flex items-center gap-1.5 py-1.5 px-4 rounded-lg border border-red-500/30 bg-red-500/10 text-red-500 text-xs font-bold cursor-pointer hover:bg-red-500/20"
+              >
+                <X size={13} /> Stop AI Stream
+              </button>
+            </div>
+          )}
+          <div ref={chatEndRef} />
         </div>
 
-        {/* RIGHT PANEL: CHAT ────────────────────────────────────────────── */}
-        <div style={{
-          flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden',
-          background: 'rgba(2,6,23,0.85)', border: '1px solid rgba(0,240,255,0.12)',
-          borderRadius: 16,
-        }}>
-          {/* Chat Header */}
-          <div style={{
-            padding: '14px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)',
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            background: 'rgba(0,240,255,0.02)',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ position: 'relative' }}>
-                <Brain size={20} color="#00f0ff" />
-                <div style={{
-                  position: 'absolute', top: -2, right: -2, width: 7, height: 7, borderRadius: '50%',
-                  background: apiKeyMissing ? '#ef4444' : '#10b981',
-                  boxShadow: apiKeyMissing ? '0 0 6px #ef4444' : '0 0 6px #10b981',
-                  animation: 'pulse 2s infinite',
-                }} />
+        {/* Input area */}
+        <div
+          className="p-4 border-t"
+          style={{ borderColor: 'var(--cyber-border)', background: 'rgba(0,0,0,0.03)' }}
+        >
+          <form
+            onSubmit={e => { e.preventDefault(); handleSend(input); }}
+            className="flex gap-2.5 items-center max-w-4xl mx-auto"
+          >
+            {/* Voice Input Button */}
+            <button
+              type="button"
+              onClick={handleVoice}
+              disabled={!voiceSupported}
+              title={voiceSupported ? (isVoiceActive ? 'Stop voice recording' : 'Speak voice prompt') : 'Voice input not supported in this browser'}
+              className="w-10 h-10 rounded-xl border flex items-center justify-center cursor-pointer transition-colors flex-shrink-0"
+              style={{
+                borderColor: isVoiceActive ? 'rgba(239, 68, 68, 0.5)' : 'var(--cyber-border)',
+                background: isVoiceActive ? 'rgba(239, 68, 68, 0.15)' : 'var(--cyber-card)',
+                color: isVoiceActive ? '#ef4444' : voiceSupported ? 'var(--text-muted)' : 'rgba(0,0,0,0.1)',
+                animation: isVoiceActive ? 'pulse 1.2s infinite' : 'none',
+              }}
+            >
+              {isVoiceActive ? <MicOff size={16} /> : <Mic size={16} />}
+            </button>
+
+            {/* Input Field */}
+            <input
+              ref={inputRef}
+              id="chat-input"
+              type="text"
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              disabled={isLoading}
+              placeholder={isVoiceActive ? 'Listening... speak clearly now' : 'Ask about crime patterns, suspects, districts...'}
+              className="flex-1 py-2 px-4 border text-sm text-[var(--text-primary)] outline-none rounded-xl"
+              style={{
+                background: 'var(--cyber-card)',
+                borderColor: 'var(--cyber-border)',
+                height: 40,
+              }}
+              onFocus={e => { e.currentTarget.style.borderColor = 'var(--cyber-cyan)'; }}
+              onBlur={e => { e.currentTarget.style.borderColor = 'var(--cyber-border)'; }}
+            />
+
+            {/* Send Button */}
+            <button
+              type="submit"
+              disabled={isLoading || !input.trim()}
+              className="h-10 px-5 flex items-center gap-1.5 text-xs font-bold rounded-xl border transition-all flex-shrink-0 cursor-pointer"
+              style={{
+                background: isLoading || !input.trim() ? 'rgba(0,240,255,0.02)' : 'rgba(0,240,255,0.1)',
+                borderColor: isLoading || !input.trim() ? 'var(--cyber-border)' : 'var(--cyber-cyan)',
+                color: isLoading || !input.trim() ? 'var(--text-dim)' : 'var(--cyber-cyan)',
+              }}
+            >
+              <Send size={13} /> {t.btn_send}
+            </button>
+          </form>
+
+          {/* Voice Waveform Indicator */}
+          {isVoiceActive && (
+            <div className="flex items-center justify-center gap-2 text-red-500 font-bold text-xs mt-3 select-none">
+              <div className="flex gap-0.5 items-end h-3">
+                {[0, 1, 2, 3, 4, 5].map(i => (
+                  <div key={i} className="w-0.5 bg-red-500 rounded-sm"
+                    style={{
+                      height: `${4 + Math.random() * 10}px`,
+                      animation: `pulse ${0.4 + i * 0.1}s ease-in-out infinite alternate`,
+                    }} />
+                ))}
               </div>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 800, color: '#e2e8f0' }}>CrimeNet AI</div>
-                <div style={{ fontSize: 10, color: '#475569' }}>
-                  claude-sonnet-4-6 • Karnataka Police DB
-                </div>
-              </div>
+              <span>Listening in {lang === 'kn' ? 'ಕನ್ನಡ' : 'English (India)'}...</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              {isLoading && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#00f0ff' }}>
-                  <Radio size={11} style={{ animation: 'pulse 1s infinite' }} />
-                  <span style={{ fontSize: 10, fontWeight: 700 }}>PROCESSING...</span>
-                </div>
-              )}
-              <span style={{ fontSize: 10, color: '#334155' }}>{messages.length - 1} exchanges</span>
-            </div>
-          </div>
-
-          {/* Messages */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: 18 }}>
-            {messages.map(msg => {
-              const isAI = msg.role === 'assistant';
-              return (
-                <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isAI ? 'flex-start' : 'flex-end' }}>
-                  <span style={{ fontSize: 10, color: '#334155', marginBottom: 5, fontFamily: 'monospace' }}>
-                    {isAI ? `🤖 ${t.chat_ai_name}` : `👮 ${t.chat_officer}`} · {msg.timestamp}
-                  </span>
-
-                  <div style={{
-                    maxWidth: '88%', borderRadius: isAI ? '4px 16px 16px 16px' : '16px 4px 16px 16px',
-                    padding: '14px 16px',
-                    background: isAI
-                      ? msg.isError ? 'rgba(239,68,68,0.06)' : 'rgba(5,12,28,0.95)'
-                      : 'rgba(0,240,255,0.07)',
-                    border: isAI
-                      ? msg.isError ? '1px solid rgba(239,68,68,0.25)' : '1px solid rgba(0,240,255,0.1)'
-                      : '1px solid rgba(0,240,255,0.2)',
-                  }}>
-                    {isAI ? (
-                      <>
-                        <RenderMarkdown text={msg.content} />
-                        {msg.isStreaming && (
-                          <div style={{ display: 'flex', gap: 4, marginTop: 8, alignItems: 'center' }}>
-                            {[0, 1, 2].map(i => (
-                              <div key={i} style={{
-                                width: 6, height: 6, borderRadius: '50%', background: '#00f0ff',
-                                animation: `dotBounce 1.2s ${i * 0.2}s ease-in-out infinite`,
-                              }} />
-                            ))}
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <div style={{ fontSize: 13, color: '#e2e8f0', lineHeight: 1.65 }}>{msg.content}</div>
-                    )}
-
-                    {/* Action buttons on AI messages */}
-                    {isAI && !msg.isStreaming && msg.id !== 'welcome' && (
-                      <div style={{ display: 'flex', gap: 6, marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                        <button onClick={() => handleCopy(msg.content, msg.id)}
-                          style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 6,
-                            border: '1px solid rgba(255,255,255,0.08)', background: 'transparent',
-                            color: copiedId === msg.id ? '#10b981' : '#64748b', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
-                          {copiedId === msg.id ? <Check size={11} /> : <Copy size={11} />}
-                          {copiedId === msg.id ? t.btn_copied : t.btn_copy}
-                        </button>
-                        <button onClick={() => handleDownloadPDF()}
-                          style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 6,
-                            border: '1px solid rgba(0,240,255,0.15)', background: 'rgba(0,240,255,0.06)',
-                            color: '#00f0ff', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
-                          <Download size={11} /> {t.btn_export_report}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-
-            {/* Stop button */}
-            {isLoading && (
-              <div style={{ display: 'flex', justifyContent: 'center' }}>
-                <button onClick={handleStop}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 18px',
-                    borderRadius: 8, border: '1px solid rgba(239,68,68,0.3)',
-                    background: 'rgba(239,68,68,0.08)', color: '#ef4444',
-                    fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                  <X size={13} /> {t.btn_stop_response}
-                </button>
-              </div>
-            )}
-            <div ref={chatEndRef} />
-          </div>
-
-          {/* Input Area */}
-          <div style={{ padding: '14px 20px', borderTop: '1px solid rgba(255,255,255,0.06)', background: 'rgba(0,0,0,0.15)' }}>
-            <form onSubmit={e => { e.preventDefault(); handleSend(input); }}
-              style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              {/* Voice Button */}
-              <button type="button" onClick={handleVoice} disabled={!voiceSupported}
-                title={voiceSupported ? (isVoiceActive ? t.btn_voice_stop : t.btn_voice_start) : 'Voice not supported in this browser'}
-                style={{
-                  width: 42, height: 42, borderRadius: 10, flexShrink: 0,
-                  border: `1px solid ${isVoiceActive ? 'rgba(239,68,68,0.5)' : 'rgba(255,255,255,0.08)'}`,
-                  background: isVoiceActive ? 'rgba(239,68,68,0.15)' : 'rgba(255,255,255,0.03)',
-                  color: isVoiceActive ? '#ef4444' : voiceSupported ? '#64748b' : '#1e293b',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  cursor: voiceSupported ? 'pointer' : 'not-allowed',
-                  animation: isVoiceActive ? 'pulse 1s infinite' : 'none',
-                }}>
-                {isVoiceActive ? <MicOff size={16} /> : <Mic size={16} />}
-              </button>
-
-              {/* Text Input */}
-              <input
-                ref={inputRef}
-                id="chat-input"
-                type="text"
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                disabled={isLoading}
-                placeholder={isVoiceActive ? t.chat_listening : t.chat_placeholder}
-                style={{
-                  flex: 1, padding: '10px 14px', background: 'rgba(10,22,40,0.8)',
-                  border: '1px solid rgba(0,240,255,0.2)', borderRadius: 10,
-                  color: '#f1f5f9', fontSize: 13, outline: 'none', fontFamily: 'inherit',
-                }}
-                onFocus={e => { e.currentTarget.style.borderColor = 'rgba(0,240,255,0.45)'; }}
-                onBlur={e => { e.currentTarget.style.borderColor = 'rgba(0,240,255,0.2)'; }}
-              />
-
-              {/* Send Button */}
-              <button type="submit" disabled={isLoading || !input.trim()}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 6, padding: '10px 18px',
-                  background: isLoading || !input.trim() ? 'rgba(0,240,255,0.04)' : 'rgba(0,240,255,0.12)',
-                  border: '1px solid rgba(0,240,255,0.3)', borderRadius: 10,
-                  color: isLoading || !input.trim() ? '#334155' : '#00f0ff',
-                  fontSize: 13, fontWeight: 700, cursor: isLoading || !input.trim() ? 'not-allowed' : 'pointer',
-                  fontFamily: 'inherit', flexShrink: 0, transition: 'all 0.2s',
-                }}>
-                <Send size={14} /> {t.btn_send}
-              </button>
-            </form>
-
-            {/* Voice active indicator */}
-            {isVoiceActive && (
-              <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: '#ef4444', fontWeight: 700 }}>
-                <div style={{ display: 'flex', gap: 3 }}>
-                  {[0, 1, 2, 3, 4].map(i => (
-                    <div key={i} style={{ width: 3, borderRadius: 2, background: '#ef4444',
-                      height: `${8 + Math.random() * 12}px`,
-                      animation: `pulse ${0.4 + i * 0.1}s ease-in-out infinite alternate` }} />
-                  ))}
-                </div>
-                {lang === 'kn' ? t.chat_voice_listening : 'Listening in English (India)...'}
-              </div>
-            )}
-          </div>
+          )}
         </div>
-      </div>
+      </main>
 
-      {/* Animations */}
+      {/* Embedded keyframe styles for typing bounce & cursor blink */}
       <style>{`
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
         @keyframes dotBounce {
           0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-          30% { transform: translateY(-6px); opacity: 1; }
+          30% { transform: translateY(-5px); opacity: 1; }
+        }
+        @keyframes cursorBlink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0; }
+        }
+        .animate-cursor-blink {
+          animation: cursorBlink 0.8s step-end infinite;
         }
       `}</style>
     </div>

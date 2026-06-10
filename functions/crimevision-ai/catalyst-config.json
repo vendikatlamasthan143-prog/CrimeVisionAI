@@ -1,0 +1,5 @@
+{
+  "name": "crimevision-ai",
+  "type": "advanced_io",
+  "runtime": "nodejs20"
+}

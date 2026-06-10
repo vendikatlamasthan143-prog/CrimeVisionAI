@@ -161,7 +161,7 @@ function FIRDetailPanel({ fir }: { fir: FIRRecord }) {
       doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(12);
       doc.text('KARNATAKA STATE POLICE — RESTRICTED', pw / 2, 12, { align: 'center' });
       doc.setFontSize(9); doc.setTextColor(0, 200, 220);
-      doc.text('CrimeVision AI v5.0 | FIR Intelligence Report', pw / 2, 20, { align: 'center' });
+      doc.text('CrimeVision AI v6.0 | FIR Intelligence Report', pw / 2, 20, { align: 'center' });
       doc.setFontSize(7); doc.setTextColor(150, 150, 150);
       doc.text(`Generated: ${new Date().toLocaleString('en-IN')} IST`, pw / 2, 27, { align: 'center' });
 
@@ -240,7 +240,7 @@ function FIRDetailPanel({ fir }: { fir: FIRRecord }) {
       y = Math.max(y + 6, 280);
       doc.setDrawColor(200, 200, 200); doc.line(15, y, pw - 15, y); y += 6;
       doc.setFontSize(7); doc.setTextColor(150, 150, 150);
-      doc.text('CrimeVision AI v5.0 | Karnataka State Police | RESTRICTED — FOR OFFICIAL USE ONLY', pw / 2, y, { align: 'center' });
+      doc.text('CrimeVision AI v6.0 | Karnataka State Police | RESTRICTED — FOR OFFICIAL USE ONLY', pw / 2, y, { align: 'center' });
 
       doc.save(`FIR_${fir.firNumber.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.pdf`);
     } catch (err) {

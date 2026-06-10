@@ -70,7 +70,7 @@ function buildHeader(doc: JsPDFDoc, title: string, lang: 'en' | 'kn') {
   doc.setFontSize(8).setTextColor(180, 180, 180);
   doc.text('RESTRICTED — FOR OFFICIAL USE ONLY', pw / 2, 19, { align: 'center' });
   doc.setFontSize(9).setTextColor(0, 200, 220);
-  doc.text('CrimeVision AI v5.0 | KSP Datathon 2026', pw / 2, 26, { align: 'center' });
+  doc.text('CrimeVision AI v6.0 | KSP Datathon 2026', pw / 2, 26, { align: 'center' });
 
   // Title section
   doc.setTextColor(30, 30, 30).setFontSize(14).setFont('helvetica', 'bold');
@@ -85,7 +85,7 @@ function buildFooter(doc: JsPDFDoc, y: number) {
   if (y > 260) { doc.addPage(); y = 20; }
   doc.setDrawColor(200, 200, 200).line(15, y, pw - 15, y);
   doc.setFontSize(7).setTextColor(150, 150, 150).setFont('helvetica', 'normal');
-  doc.text('CrimeVision AI v5.0 | KSP Datathon 2026 | Karnataka State Police | RESTRICTED — FOR OFFICIAL USE ONLY', pw / 2, y + 6, { align: 'center' });
+  doc.text('CrimeVision AI v6.0 | KSP Datathon 2026 | Karnataka State Police | RESTRICTED — FOR OFFICIAL USE ONLY', pw / 2, y + 6, { align: 'center' });
 }
 
 function sectionHeader(doc: JsPDFDoc, text: string, y: number): number {
@@ -352,7 +352,7 @@ async function buildAllReports(lang: 'en' | 'kn') {
   doc.setTextColor(0, 200, 220).setFont('helvetica', 'bold').setFontSize(10);
   doc.text('KARNATAKA STATE POLICE', pw / 2, 100, { align: 'center' });
   doc.setFontSize(20).setTextColor(240, 240, 240);
-  doc.text('CrimeVision AI v5.0', pw / 2, 120, { align: 'center' });
+  doc.text('CrimeVision AI v6.0', pw / 2, 120, { align: 'center' });
   doc.setFontSize(12).setTextColor(100, 150, 200);
   doc.text('COMPREHENSIVE INTELLIGENCE REPORT', pw / 2, 132, { align: 'center' });
   doc.setFontSize(9).setTextColor(120, 120, 120);
@@ -437,8 +437,8 @@ export default function ReportsPage() {
       title: t.report_district_intel,
       titleKn: 'ಜಿಲ್ಲಾ ಗುಪ್ತಚರ ವರದಿ',
       description: 'Complete intelligence analysis for all 31 Karnataka districts including crime counts, risk scores, trend analysis, officer deployment, and top crime categories.',
-      icon: <Shield size={22} color="#00f0ff" />,
-      color: '#00f0ff',
+      icon: <Shield size={22} className="text-[var(--cyber-cyan)]" />,
+      color: 'var(--cyber-cyan)',
       pages: 4,
       category: 'INTELLIGENCE',
     },
@@ -447,8 +447,8 @@ export default function ReportsPage() {
       title: t.report_criminal_network,
       titleKn: 'ಅಪರಾಧಿ ಜಾಲ ವಿಶ್ಲೇಷಣೆ',
       description: 'Top 15 suspect profiles with risk scores, FIR links, aliases, associated networks, and current status (Wanted/Arrested/Absconding).',
-      icon: <Network size={22} color="#8b5cf6" />,
-      color: '#8b5cf6',
+      icon: <Network size={22} className="text-[var(--cyber-purple)]" />,
+      color: 'var(--cyber-purple)',
       pages: 3,
       category: 'SUSPECTS',
     },
@@ -457,8 +457,8 @@ export default function ReportsPage() {
       title: t.report_cybercrime,
       titleKn: 'ಸೈಬರ್ ಅಪರಾಧ ವಿಶ್ಲೇಷಣೆ ವರದಿ',
       description: 'Deep-dive into 18,234 cybercrime cases: phishing vectors, financial exposure (₹142+ Cr), district breakdown, and active SIT investigations.',
-      icon: <Monitor size={22} color="#f59e0b" />,
-      color: '#f59e0b',
+      icon: <Monitor size={22} className="text-[var(--cyber-amber)]" />,
+      color: 'var(--cyber-amber)',
       pages: 4,
       category: 'CYBERCRIME',
     },
@@ -467,8 +467,8 @@ export default function ReportsPage() {
       title: t.report_threat_assessment,
       titleKn: 'ಬೆದರಿಕೆ ಮೌಲ್ಯಮಾಪನ ವರದಿ',
       description: 'State-level threat assessment covering current anomaly spikes, crime category risks, and 6 strategic recommendations for immediate action.',
-      icon: <Target size={22} color="#ef4444" />,
-      color: '#ef4444',
+      icon: <Target size={22} className="text-[var(--cyber-red)]" />,
+      color: 'var(--cyber-red)',
       pages: 5,
       category: 'THREAT',
     },
@@ -514,13 +514,13 @@ export default function ReportsPage() {
             background: 'rgba(0,240,255,0.1)', border: '1px solid rgba(0,240,255,0.3)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <FileText size={22} color="#00f0ff" />
+            <FileText size={22} className="text-[var(--cyber-cyan)]" />
           </div>
           <div>
-            <h1 style={{ fontSize: 20, fontWeight: 900, color: '#f1f5f9', margin: 0 }}>
+            <h1 style={{ fontSize: 20, fontWeight: 900, color: 'var(--text-primary)', margin: 0 }}>
               {t.page_reports}
             </h1>
-            <p style={{ fontSize: 12, color: '#64748b', margin: '2px 0 0' }}>
+            <p style={{ fontSize: 12, color: 'var(--text-dim)', margin: '2px 0 0' }}>
               {t.sub_reports}
             </p>
           </div>
@@ -549,21 +549,18 @@ export default function ReportsPage() {
       </div>
 
       {/* ── Stats Strip ──────────────────────────────────────────────── */}
-      <div style={{
-        display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 28,
-      }}>
+      <div className="responsive-grid-4" style={{ gap: 12, marginBottom: 28 }}>
         {[
-          { label: 'Total Crimes', value: SUMMARY_METRICS.totalCrimes.toLocaleString(), color: '#ef4444' },
-          { label: 'Districts Covered', value: '31', color: '#00f0ff' },
-          { label: 'Clearance Rate', value: `${SUMMARY_METRICS.clearanceRate}%`, color: '#10b981' },
-          { label: 'Active Cases', value: SUMMARY_METRICS.activeCases.toLocaleString(), color: '#f59e0b' },
+          { label: 'Total Crimes', value: SUMMARY_METRICS.totalCrimes.toLocaleString(), color: 'var(--cyber-red)' },
+          { label: 'Districts Covered', value: '31', color: 'var(--cyber-cyan)' },
+          { label: 'Clearance Rate', value: `${SUMMARY_METRICS.clearanceRate}%`, color: 'var(--cyber-green)' },
+          { label: 'Active Cases', value: SUMMARY_METRICS.activeCases.toLocaleString(), color: 'var(--cyber-amber)' },
         ].map(s => (
-          <div key={s.label} style={{
-            background: 'rgba(2,6,23,0.85)', border: '1px solid rgba(255,255,255,0.06)',
-            borderRadius: 12, padding: '14px 18px', textAlign: 'center',
+          <div key={s.label} className="glass-card" style={{
+            padding: '14px 18px', textAlign: 'center',
           }}>
             <div style={{ fontSize: 22, fontWeight: 900, color: s.color }}>{s.value}</div>
-            <div style={{ fontSize: 11, color: '#64748b', marginTop: 3, fontWeight: 600 }}>{s.label}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 3, fontWeight: 600 }}>{s.label}</div>
           </div>
         ))}
       </div>
@@ -576,10 +573,9 @@ export default function ReportsPage() {
           return (
             <div
               key={card.id}
+              className="glass-card"
               style={{
-                background: 'rgba(2,6,23,0.9)',
-                border: `1px solid rgba(${card.color === '#00f0ff' ? '0,240,255' : card.color === '#8b5cf6' ? '139,92,246' : card.color === '#f59e0b' ? '245,158,11' : '239,68,68'},0.2)`,
-                borderRadius: 16, padding: 24,
+                padding: 24,
                 transition: 'all 0.2s',
               }}
             >
@@ -587,8 +583,8 @@ export default function ReportsPage() {
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
                 <div style={{
                   width: 48, height: 48, borderRadius: 12,
-                  background: `rgba(${card.color === '#00f0ff' ? '0,240,255' : card.color === '#8b5cf6' ? '139,92,246' : card.color === '#f59e0b' ? '245,158,11' : '239,68,68'},0.1)`,
-                  border: `1px solid rgba(${card.color === '#00f0ff' ? '0,240,255' : card.color === '#8b5cf6' ? '139,92,246' : card.color === '#f59e0b' ? '245,158,11' : '239,68,68'},0.3)`,
+                  background: 'rgba(0, 240, 255, 0.05)',
+                  border: '1px solid var(--cyber-border)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
                   {card.icon}
@@ -596,31 +592,31 @@ export default function ReportsPage() {
                 <div style={{ textAlign: 'right' }}>
                   <div style={{
                     fontSize: 9, fontWeight: 800, padding: '3px 8px', borderRadius: 6,
-                    background: `rgba(${card.color === '#00f0ff' ? '0,240,255' : card.color === '#8b5cf6' ? '139,92,246' : card.color === '#f59e0b' ? '245,158,11' : '239,68,68'},0.1)`,
-                    color: card.color, border: `1px solid rgba(${card.color === '#00f0ff' ? '0,240,255' : card.color === '#8b5cf6' ? '139,92,246' : card.color === '#f59e0b' ? '245,158,11' : '239,68,68'},0.3)`,
+                    background: 'rgba(0, 240, 255, 0.05)',
+                    color: card.color, border: '1px solid var(--cyber-border)',
                     letterSpacing: '0.1em',
                   }}>
                     {card.category}
                   </div>
-                  <div style={{ fontSize: 10, color: '#475569', marginTop: 4 }}>{card.pages} pages</div>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>{card.pages} pages</div>
                 </div>
               </div>
 
               {/* Title */}
-              <h3 style={{ fontSize: 15, fontWeight: 800, color: '#f1f5f9', margin: '0 0 4px', lineHeight: 1.3 }}>
+              <h3 style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 4px', lineHeight: 1.3 }}>
                 {lang === 'kn' ? card.titleKn : card.title}
               </h3>
-              <p style={{ fontSize: 12, color: '#64748b', lineHeight: 1.6, margin: '0 0 20px' }}>
+              <p style={{ fontSize: 12, color: 'var(--text-dim)', lineHeight: 1.6, margin: '0 0 20px' }}>
                 {card.description}
               </p>
 
               {/* PDF Info */}
               <div style={{
                 padding: '10px 14px', borderRadius: 8, marginBottom: 16,
-                background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)',
+                background: 'var(--cyber-bg)', border: '1px solid var(--cyber-border)',
               }}>
-                <div style={{ fontSize: 10, color: '#475569', marginBottom: 4 }}>PDF includes:</div>
-                <div style={{ fontSize: 11, color: '#64748b', lineHeight: 1.6 }}>
+                <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 4 }}>PDF includes:</div>
+                <div style={{ fontSize: 11, color: 'var(--text-dim)', lineHeight: 1.6 }}>
                   ✓ KSP RESTRICTED header · ✓ Generated timestamp<br />
                   ✓ Data tables with all 31 districts · ✓ Official footer
                 </div>
@@ -636,9 +632,9 @@ export default function ReportsPage() {
                   background: isDone
                     ? 'rgba(16,185,129,0.1)'
                     : isGen
-                      ? 'rgba(255,255,255,0.03)'
-                      : `rgba(${card.color === '#00f0ff' ? '0,240,255' : card.color === '#8b5cf6' ? '139,92,246' : card.color === '#f59e0b' ? '245,158,11' : '239,68,68'},0.1)`,
-                  border: `1px solid ${isDone ? 'rgba(16,185,129,0.3)' : `rgba(${card.color === '#00f0ff' ? '0,240,255' : card.color === '#8b5cf6' ? '139,92,246' : card.color === '#f59e0b' ? '245,158,11' : '239,68,68'},0.3)`}`,
+                      ? 'rgba(0,0,0,0.03)'
+                      : 'rgba(0, 240, 255, 0.05)',
+                  border: `1px solid ${isDone ? 'rgba(16,185,129,0.3)' : 'var(--cyber-border)'}`,
                   borderRadius: 10, fontFamily: 'inherit',
                   color: isDone ? '#10b981' : isGen ? '#64748b' : card.color,
                   fontSize: 12, fontWeight: 800, cursor: isGen || generatingAll ? 'not-allowed' : 'pointer',
@@ -675,15 +671,15 @@ export default function ReportsPage() {
       {/* Info Note */}
       <div style={{
         marginTop: 24, padding: '14px 18px', borderRadius: 12,
-        background: 'rgba(0,240,255,0.03)', border: '1px solid rgba(0,240,255,0.1)',
+        background: 'rgba(0,240,255,0.03)', border: '1px solid var(--cyber-border)',
         display: 'flex', alignItems: 'flex-start', gap: 10,
       }}>
-        <AlertCircle size={15} color="#00f0ff" style={{ flexShrink: 0, marginTop: 2 }} />
-        <div style={{ fontSize: 12, color: '#64748b', lineHeight: 1.6 }}>
-          <strong style={{ color: '#94a3b8' }}>PDF Generation Note:</strong>{' '}
+        <AlertCircle size={15} className="text-[var(--cyber-cyan)]" style={{ flexShrink: 0, marginTop: 2 }} />
+        <div style={{ fontSize: 12, color: 'var(--text-dim)', lineHeight: 1.6 }}>
+          <strong style={{ color: 'var(--text-muted)' }}>PDF Generation Note:</strong>{' '}
           Reports are generated client-side using jsPDF loaded from CDN. An internet connection is required for the first download.
           All data comes from the KSP crime intelligence database (82,089 records). Reports are marked{' '}
-          <strong style={{ color: '#ef4444' }}>RESTRICTED</strong> and intended for official use only.
+          <strong style={{ color: 'var(--cyber-red)' }}>RESTRICTED</strong> and intended for official use only.
         </div>
       </div>
 

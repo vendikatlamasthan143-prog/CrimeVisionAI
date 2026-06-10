@@ -181,7 +181,7 @@ export default function LoginPage() {
               background: 'rgba(0,240,255,0.06)', border: '1px solid rgba(0,240,255,0.2)' }}>
               <Radio size={9} color="#00f0ff" style={{ animation: 'pulse 1.5s infinite' }} />
               <span style={{ fontSize: 10, color: '#00f0ff', fontWeight: 700, letterSpacing: '0.1em' }}>
-                v5.0 • 256-BIT SSL
+                v6.0 • 256-BIT SSL
               </span>
             </div>
           </div>
@@ -428,7 +428,7 @@ export default function LoginPage() {
                 Unauthorized access is a punishable offence under IT Act 2000.
               </p>
               <p style={{ fontSize: 10, color: '#1e293b', marginTop: 4 }}>
-                KSP Datathon 2026 • CrimeVision AI v5.0
+                KSP Datathon 2026 • CrimeVision AI v6.0
               </p>
             </div>
           </>

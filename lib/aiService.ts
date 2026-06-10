@@ -18,16 +18,15 @@ export async function generateTextStream(params: {
   signal?: AbortSignal;
 }): Promise<string> {
   const provider = getActiveProvider();
-  const apiKey = getActiveApiKey();
-
-  if (!provider || !apiKey) {
-    throw new Error('AI API Key not configured. Please enter your key in the settings.');
-  }
 
   if (provider === 'gemini') {
+    const apiKey = getActiveApiKey();
+    if (!apiKey) {
+      throw new Error('AI API Key not configured. Please enter your Google Gemini key in the settings.');
+    }
     return runGeminiStream(apiKey, params);
   } else {
-    return runAnthropicStream(apiKey, params);
+    return runAnthropicStream(params);
   }
 }
 
@@ -132,39 +131,40 @@ async function runGeminiStream(
   return fullText || 'No response generated.';
 }
 
-// ── Anthropic REST Streaming Implementation ───────────────────────────────────
+// Helper to resolve Catalyst API proxy url dynamically
+export function getApiEndpoint(): string {
+  if (typeof window === 'undefined') {
+    return '/api/crimevision-ai/';
+  }
+  if (window.location.pathname.includes('/app/')) {
+    return '/server/crimevision-ai/api/crimevision-ai/';
+  }
+  return '/api/crimevision-ai/';
+}
+
+// ── Anthropic REST Streaming Implementation via Catalyst Proxy ───────────────
 async function runAnthropicStream(
-  apiKey: string,
   params: { systemPrompt?: string; messages: ChatMessage[]; onChunk: (text: string) => void; signal?: AbortSignal }
 ): Promise<string> {
   const { systemPrompt, messages, onChunk, signal } = params;
+  const endpoint = getApiEndpoint();
 
-  const body: any = {
-    model: 'claude-sonnet-4-6',
-    max_tokens: 2048,
-    messages: messages.map(m => ({ role: m.role, content: m.content })),
-    stream: true,
-  };
-
-  if (systemPrompt) {
-    body.system = systemPrompt;
-  }
-
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+  const response = await fetch(endpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify({
+      messages,
+      systemPrompt,
+      stream: true,
+    }),
     signal,
   });
 
   if (!response.ok) {
     const errData = await response.json().catch(() => ({}));
-    throw new Error(errData.error?.message || `Claude API Error ${response.status}`);
+    throw new Error(errData.error || `Claude Proxy Error ${response.status}`);
   }
 
   const reader = response.body?.getReader();
@@ -205,13 +205,12 @@ export async function generateText(params: {
   messages: ChatMessage[];
 }): Promise<string> {
   const provider = getActiveProvider();
-  const apiKey = getActiveApiKey();
-
-  if (!provider || !apiKey) {
-    throw new Error('AI API Key not configured.');
-  }
 
   if (provider === 'gemini') {
+    const apiKey = getActiveApiKey();
+    if (!apiKey) {
+      throw new Error('AI API Key not configured. Please enter your Google Gemini key in the settings.');
+    }
     const contents = params.messages.map(m => ({
       role: m.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: m.content }]
@@ -248,33 +247,25 @@ export async function generateText(params: {
     const data = await response.json();
     return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
   } else {
-    // Anthropic
-    const body: any = {
-      model: 'claude-sonnet-4-6',
-      max_tokens: 3000,
-      messages: params.messages.map(m => ({ role: m.role, content: m.content })),
-    };
-    
-    if (params.systemPrompt) {
-      body.system = params.systemPrompt;
-    }
-    
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    // Anthropic - secure proxy call to backend
+    const endpoint = getApiEndpoint();
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify({
+        messages: params.messages,
+        systemPrompt: params.systemPrompt,
+        stream: false,
+      }),
     });
-    
+
     if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(err.error?.message || `Claude Error ${response.status}`);
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.error || `Claude Proxy Error ${response.status}`);
     }
-    
+
     const data = await response.json();
     return data.content?.[0]?.text || '';
   }

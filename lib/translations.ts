@@ -331,7 +331,7 @@ export const translations: Record<Language, TranslationSet> = {
     report_header: 'KARNATAKA STATE POLICE',
     report_restricted: 'RESTRICTED — FOR OFFICIAL USE ONLY',
     report_generated: 'Report Generated',
-    report_footer: 'CrimeVision AI v5.0 | KSP Datathon 2026 | Karnataka State Police',
+    report_footer: 'CrimeVision AI v6.0 | KSP Datathon 2026 | Karnataka State Police',
 
     pred_high_risk_districts: 'High Risk Districts',
     pred_crime_spikes: 'Predicted Crime Spikes',
@@ -511,7 +511,7 @@ export const translations: Record<Language, TranslationSet> = {
     report_header: 'ಕರ್ನಾಟಕ ರಾಜ್ಯ ಪೊಲೀಸ್',
     report_restricted: 'ನಿರ್ಬಂಧಿತ — ಅಧಿಕೃತ ಬಳಕೆಗೆ ಮಾತ್ರ',
     report_generated: 'ವರದಿ ರಚಿಸಲಾಗಿದೆ',
-    report_footer: 'CrimeVision AI v5.0 | KSP Datathon 2026 | ಕರ್ನಾಟಕ ರಾಜ್ಯ ಪೊಲೀಸ್',
+    report_footer: 'CrimeVision AI v6.0 | KSP Datathon 2026 | ಕರ್ನಾಟಕ ರಾಜ್ಯ ಪೊಲೀಸ್',
 
     pred_high_risk_districts: 'ಹೆಚ್ಚು ಅಪಾಯದ ಜಿಲ್ಲೆಗಳು',
     pred_crime_spikes: 'ಊಹಿಸಿದ ಅಪರಾಧ ಏರಿಕೆ',

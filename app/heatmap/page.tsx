@@ -170,7 +170,7 @@ function HeatmapContent() {
       doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(12);
       doc.text('KARNATAKA STATE POLICE — DISTRICT HEATMAP REPORT', pw / 2, 12, { align: 'center' });
       doc.setFontSize(8); doc.setTextColor(0, 200, 220);
-      doc.text('CrimeVision AI v5.0 | Risk Intelligence', pw / 2, 20, { align: 'center' });
+      doc.text('CrimeVision AI v6.0 | Risk Intelligence', pw / 2, 20, { align: 'center' });
       doc.setFontSize(7); doc.setTextColor(150, 150, 150);
       doc.text(`Generated: ${new Date().toLocaleString('en-IN')} IST`, pw / 2, 27, { align: 'center' });
 
@@ -282,7 +282,7 @@ function HeatmapContent() {
       // Footer
       doc.setDrawColor(200, 200, 200); doc.line(15, 283, pw - 15, 283);
       doc.setFontSize(7); doc.setTextColor(150, 150, 150);
-      doc.text('CrimeVision AI v5.0 | KSP Datathon 2026 | Karnataka State Police | RESTRICTED', pw / 2, 289, { align: 'center' });
+      doc.text('CrimeVision AI v6.0 | KSP Datathon 2026 | Karnataka State Police | RESTRICTED', pw / 2, 289, { align: 'center' });
 
       doc.save(`KSP_Heatmap_${selectedDistrict.name.replace(/ /g, '_')}_${Date.now()}.pdf`);
     } catch (err) {

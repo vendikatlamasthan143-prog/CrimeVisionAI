@@ -1,4 +1,10 @@
 {
+  "functions": {
+    "source": "functions",
+    "targets": [
+      "crimevision-ai"
+    ]
+  },
   "client": {
     "source": "out",
     "scripts": {

@@ -6,6 +6,8 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { LanguageProvider } from '@/components/LanguageToggle';
+import { ThemeProvider } from '@/components/ThemeContext';
+import { PresentationProvider } from '@/components/PresentationContext';
 import AuthGuard from '@/components/AuthGuard';
 
 export const metadata: Metadata = {
@@ -29,7 +31,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="cyber-grid" style={{ fontFamily: "'Inter', sans-serif" }}>
         <LanguageProvider>
-          <AuthGuard>{children}</AuthGuard>
+          <ThemeProvider>
+            <PresentationProvider>
+              <AuthGuard>{children}</AuthGuard>
+            </PresentationProvider>
+          </ThemeProvider>
         </LanguageProvider>
       </body>
     </html>

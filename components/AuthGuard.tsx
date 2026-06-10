@@ -76,9 +76,16 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   }
 
   // Authenticated pages: sidebar + topbar layout
+  const closeSidebar = () => {
+    if (typeof document !== 'undefined') {
+      document.body.classList.remove('sidebar-open');
+    }
+  };
+
   return (
     <div className="flex min-h-screen w-full overflow-hidden">
       <Sidebar user={user} />
+      <div className="mobile-sidebar-overlay" onClick={closeSidebar} />
       <main className="flex-1 min-h-screen min-w-0" style={{ paddingLeft: '280px' }}>
         <Topbar user={user} />
         <div style={{ paddingTop: '64px' }}>

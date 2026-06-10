@@ -1,19 +1,15 @@
 'use client';
-// ─────────────────────────────────────────────────────────────────────────────
-// Save this file to: components/Sidebar.tsx  (REPLACE existing file entirely)
-// CrimeVision AI — Responsive Sidebar with Auth User Display
-// ─────────────────────────────────────────────────────────────────────────────
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard, Map, Network, Brain, TrendingUp, FileText,
   Shield, Zap, Radio, Bell, Clock, BarChart3, MessageSquare,
-  AlertTriangle, Package, Eye, Search, Dna, Crosshair, Cpu,
-  LogOut, User,
+  AlertTriangle, Package, Eye, Cpu, Crosshair, Dna, User
 } from 'lucide-react';
 import { useLanguage } from './LanguageToggle';
 import { DemoAccount } from '@/lib/crimeData';
+import { LIVE_ALERTS } from '@/lib/mockData';
 
 interface SidebarProps {
   user?: DemoAccount | null;
@@ -21,24 +17,17 @@ interface SidebarProps {
 
 export default function Sidebar({ user }: SidebarProps) {
   const pathname = usePathname();
-  const router = useRouter();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
+
+  // Active unacknowledged alerts count
+  const unreadAlertsCount = LIVE_ALERTS.filter(alert => !alert.acknowledged).length;
 
   const NAV_GROUPS = [
     {
-      label: t.group_command,
+      label: lang === 'en' ? 'DASHBOARD' : 'ಡ್ಯಾಶ್‌ಬೋರ್ಡ್',
       items: [
         { href: '/', icon: LayoutDashboard, label: t.nav_dashboard, badge: null },
-        { href: '/search', icon: Search, label: t.nav_case_search, badge: '55' },
         { href: '/commissioner', icon: Eye, label: t.nav_commissioner_view, badge: null },
-      ],
-    },
-    {
-      label: t.group_advanced_ai,
-      items: [
-        { href: '/genome', icon: Dna, label: t.nav_crime_genome, badge: 'NEW' },
-        { href: '/detective', icon: Cpu, label: t.nav_ai_detective, badge: 'NEW' },
-        { href: '/copilot', icon: Crosshair, label: t.nav_investigation_copilot, badge: 'NEW' },
       ],
     },
     {
@@ -46,12 +35,21 @@ export default function Sidebar({ user }: SidebarProps) {
       items: [
         { href: '/heatmap', icon: Map, label: t.nav_karnataka_map, badge: null },
         { href: '/network', icon: Network, label: t.nav_criminal_network, badge: null },
-        { href: '/alerts', icon: Bell, label: t.nav_live_alerts, badge: '10' },
-        { href: '/anomaly', icon: AlertTriangle, label: t.nav_anomaly_detection, badge: '6' },
+        { href: '/alerts', icon: Bell, label: t.nav_live_alerts, badge: unreadAlertsCount > 0 ? String(unreadAlertsCount) : null },
+        { href: '/anomaly', icon: AlertTriangle, label: t.nav_anomaly_detection, badge: null },
       ],
     },
     {
-      label: t.group_analysis,
+      label: lang === 'en' ? 'AI TOOLS' : 'AI ಪರಿಕರಗಳು',
+      items: [
+        { href: '/investigator', icon: MessageSquare, label: t.nav_ai_investigator, badge: null },
+        { href: '/genome', icon: Dna, label: t.nav_crime_genome, badge: null },
+        { href: '/detective', icon: Cpu, label: t.nav_ai_detective, badge: null },
+        { href: '/copilot', icon: Crosshair, label: t.nav_investigation_copilot, badge: null },
+      ],
+    },
+    {
+      label: lang === 'en' ? 'ANALYTICS' : 'ವಿಶ್ಲೇಷಣೆ',
       items: [
         { href: '/insights', icon: Brain, label: t.nav_ai_insights, badge: null },
         { href: '/timeline', icon: Clock, label: t.nav_crime_timeline, badge: null },
@@ -60,19 +58,13 @@ export default function Sidebar({ user }: SidebarProps) {
       ],
     },
     {
-      label: t.group_operations,
+      label: lang === 'en' ? 'OPERATIONS' : 'ಕಾರ್ಯಾಚರಣೆ',
       items: [
-        { href: '/investigator', icon: MessageSquare, label: t.nav_ai_investigator, badge: null },
         { href: '/resources', icon: Package, label: t.nav_resource_allocation, badge: null },
         { href: '/reports', icon: FileText, label: t.nav_reports, badge: null },
       ],
     },
   ];
-
-  const handleLogout = () => {
-    try { sessionStorage.removeItem('ksp_user'); } catch { /* ignore */ }
-    router.replace('/login');
-  };
 
   const roleColor = () => {
     if (!user) return '#00f0ff';
@@ -83,68 +75,53 @@ export default function Sidebar({ user }: SidebarProps) {
 
   return (
     <aside
-      className="fixed left-0 top-0 h-screen flex flex-col z-50"
+      className="fixed left-0 top-0 h-screen flex flex-col z-50 select-none"
       style={{
         width: '280px',
-        background: 'rgba(2, 6, 23, 0.98)',
-        borderRight: '1px solid rgba(0, 240, 255, 0.12)',
+        background: 'var(--sidebar-bg)',
+        borderRight: '1px solid var(--cyber-border)',
         backdropFilter: 'blur(24px)',
       }}
     >
       {/* ── Logo ──────────────────────────────────────────────────────── */}
-      <div className="p-5 border-b" style={{ borderColor: 'rgba(0, 240, 255, 0.1)' }}>
+      <div className="p-5 border-b flex items-center justify-between" style={{ borderColor: 'var(--cyber-border)' }}>
         <div className="flex items-center gap-3">
           <div className="relative">
             <div
-              className="w-11 h-11 rounded-xl flex items-center justify-center"
+              className="w-11 h-11 rounded-xl flex items-center justify-center animate-pulse-glow"
               style={{
-                background: 'linear-gradient(135deg, rgba(0,240,255,0.15), rgba(139,92,246,0.15))',
-                border: '1px solid rgba(0, 240, 255, 0.35)',
+                background: 'linear-gradient(135deg, rgba(0,240,255,0.08), rgba(139,92,246,0.08))',
+                border: '1px solid var(--cyber-border)',
               }}
             >
-              <Shield size={22} style={{ color: '#00f0ff' }} />
+              <Shield size={22} className="text-[var(--cyber-cyan)]" />
             </div>
-            <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-green-400 animate-pulse" />
           </div>
           <div>
-            <div className="text-sm font-black tracking-widest" style={{ color: '#00f0ff', letterSpacing: '0.15em' }}>
+            <div className="text-sm font-black tracking-widest text-[var(--cyber-cyan)]" style={{ letterSpacing: '0.15em' }}>
               CRIMEVISION
             </div>
-            <div className="text-xs font-medium tracking-widest" style={{ color: '#64748b' }}>
-              AI INTELLIGENCE PLATFORM
+            <div className="text-[9px] font-bold tracking-wider text-[var(--text-dim)] uppercase mt-0.5">
+              Karnataka Police Intel
             </div>
           </div>
         </div>
       </div>
 
-      {/* ── Live Status Bar ───────────────────────────────────────────── */}
-      <div
-        className="px-5 py-2.5 flex items-center justify-between"
-        style={{ background: 'rgba(16, 185, 129, 0.04)', borderBottom: '1px solid rgba(0, 240, 255, 0.06)' }}
-      >
-        <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, fontWeight: 700, color: '#10b981', letterSpacing: '0.08em' }}>
-          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 6px #10b981', display: 'inline-block', animation: 'pulse 2s infinite' }} />
-          {t.live_feed}
-        </span>
-        <div className="flex items-center gap-1.5">
-          <Radio size={10} style={{ color: '#00f0ff' }} className="animate-pulse" />
-          <span className="text-xs font-semibold" style={{ color: '#475569' }}>v5.0</span>
-        </div>
-      </div>
 
       {/* ── Navigation Groups ─────────────────────────────────────────── */}
-      <nav className="flex-1 overflow-y-auto py-3 px-3">
+      <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-3">
         {NAV_GROUPS.map((group) => (
-          <div key={group.label} className="mb-2">
+          <div key={group.label}>
             <div
-              className="px-3 py-1.5 text-xs font-bold tracking-widest uppercase"
-              style={group.label.includes('ADVANCED') || group.label.includes('ಸುಧಾರಿತ') ? {
-                color: '#00f0ff',
-                textShadow: '0 0 8px rgba(0,240,255,0.5)',
-                borderLeft: '2px solid rgba(0,240,255,0.5)',
-                paddingLeft: '10px', marginBottom: '4px',
-                fontSize: 9,
-              } : { color: '#334155', fontSize: 9 }}
+              className="px-3 py-1.5 text-[10px] font-black tracking-widest uppercase"
+              style={group.label.includes('AI TOOLS') || group.label.includes('ಪರಿಕರಗಳು') ? {
+                color: 'var(--cyber-cyan)',
+                textShadow: '0 0 8px rgba(0,240,255,0.4)',
+                borderLeft: '2px solid var(--cyber-cyan)',
+                paddingLeft: '10px',
+                marginBottom: '4px',
+              } : { color: 'var(--text-dim)' }}
             >
               {group.label}
             </div>
@@ -155,46 +132,48 @@ export default function Sidebar({ user }: SidebarProps) {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-150 group"
+                    onClick={() => {
+                      if (typeof document !== 'undefined') {
+                        document.body.classList.remove('sidebar-open');
+                      }
+                    }}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-150"
                     style={{
-                      background: isActive ? 'rgba(0,240,255,0.08)' : 'transparent',
-                      border: `1px solid ${isActive ? 'rgba(0,240,255,0.2)' : 'transparent'}`,
-                      color: isActive ? '#00f0ff' : '#64748b',
+                      background: isActive ? 'rgba(0,240,255,0.06)' : 'transparent',
+                      border: `1px solid ${isActive ? 'var(--cyber-cyan)' : 'transparent'}`,
+                      color: isActive ? 'var(--cyber-cyan)' : 'var(--text-muted)',
                       textDecoration: 'none',
                     }}
                     onMouseEnter={e => {
                       if (!isActive) {
-                        (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)';
-                        (e.currentTarget as HTMLElement).style.color = '#94a3b8';
+                        e.currentTarget.style.background = 'rgba(255,255,255,0.02)';
+                        e.currentTarget.style.color = 'var(--text-primary)';
                       }
                     }}
                     onMouseLeave={e => {
                       if (!isActive) {
-                        (e.currentTarget as HTMLElement).style.background = 'transparent';
-                        (e.currentTarget as HTMLElement).style.color = '#64748b';
+                        e.currentTarget.style.background = 'transparent';
+                        e.currentTarget.style.color = 'var(--text-muted)';
                       }
                     }}
                   >
                     <item.icon size={15} />
-                    <span className="flex-1 text-[13px] font-medium">{item.label}</span>
+                    <span className="flex-1 text-[13px] font-bold">{item.label}</span>
                     {item.badge && (
                       <span
-                        className="text-xs font-bold px-1.5 py-0.5 rounded-full"
-                        style={item.badge === 'NEW' ? {
-                          background: 'rgba(0, 240, 255, 0.15)', color: '#00f0ff',
-                          border: '1px solid rgba(0,240,255,0.4)', fontSize: '9px',
-                          letterSpacing: '0.08em', boxShadow: '0 0 8px rgba(0,240,255,0.3)',
-                        } : {
-                          background: 'rgba(239, 68, 68, 0.2)', color: '#f87171',
-                          border: '1px solid rgba(239,68,68,0.3)', fontSize: '10px',
+                        className="text-[9px] font-black px-1.5 py-0.5 rounded-full"
+                        style={{
+                          background: 'rgba(239, 68, 68, 0.15)',
+                          color: '#ef4444',
+                          border: '1px solid rgba(239,68,68,0.25)',
                         }}
                       >
                         {item.badge}
                       </span>
                     )}
                     {isActive && (
-                      <div className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                        style={{ background: '#00f0ff', boxShadow: '0 0 8px #00f0ff' }} />
+                      <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-[var(--cyber-cyan)]"
+                        style={{ boxShadow: '0 0 6px var(--cyber-cyan)' }} />
                     )}
                   </Link>
                 );
@@ -205,26 +184,26 @@ export default function Sidebar({ user }: SidebarProps) {
       </nav>
 
       {/* ── Threat Level + Officer Info ───────────────────────────────── */}
-      <div className="p-4 border-t" style={{ borderColor: 'rgba(0, 240, 255, 0.1)' }}>
+      <div className="p-4 border-t" style={{ borderColor: 'var(--cyber-border)', background: 'rgba(0,0,0,0.05)' }}>
         {/* State threat bar */}
         <div className="p-3 rounded-xl mb-3" style={{
-          background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)',
+          background: 'rgba(239,68,68,0.03)', border: '1px solid rgba(239,68,68,0.15)',
         }}>
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-1.5">
             <div className="flex items-center gap-1.5">
-              <Zap size={12} style={{ color: '#ef4444' }} />
-              <span className="text-xs font-bold" style={{ color: '#f87171', fontSize: 9, letterSpacing: '0.08em' }}>
+              <Zap size={11} className="text-red-500" />
+              <span className="text-[10px] font-black text-red-400 tracking-wider uppercase">
                 {t.state_threat}
               </span>
             </div>
-            <span className="text-xs font-black" style={{ color: '#ef4444', fontSize: 10 }}>HIGH</span>
+            <span className="text-[10px] font-black text-red-500">HIGH</span>
           </div>
           <div className="flex gap-1">
             {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="flex-1 h-1.5 rounded-sm"
+              <div key={i} className="flex-1 h-1 rounded-sm"
                 style={{
                   background: i <= 4 ? '#ef4444' : 'rgba(255,255,255,0.08)',
-                  boxShadow: i <= 4 ? '0 0 4px rgba(239,68,68,0.5)' : 'none',
+                  boxShadow: i <= 4 ? '0 0 4px rgba(239,68,68,0.4)' : 'none',
                 }}
               />
             ))}
@@ -236,45 +215,21 @@ export default function Sidebar({ user }: SidebarProps) {
           <div
             className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0"
             style={{
-              background: `linear-gradient(135deg, rgba(${user?.role === 'DGP' ? '239,68,68' : user?.role === 'Commissioner' ? '245,158,11' : '0,240,255'},0.15), rgba(139,92,246,0.15))`,
+              background: `linear-gradient(135deg, rgba(${user?.role === 'DGP' ? '239,68,68' : user?.role === 'Commissioner' ? '245,158,11' : '0,240,255'},0.1), rgba(139,92,246,0.1))`,
               color: roleColor(),
-              border: `1px solid rgba(${user?.role === 'DGP' ? '239,68,68' : user?.role === 'Commissioner' ? '245,158,11' : '0,240,255'},0.3)`,
+              border: `1px solid rgba(${user?.role === 'DGP' ? '239,68,68' : user?.role === 'Commissioner' ? '245,158,11' : '0,240,255'},0.25)`,
             }}
           >
-            <User size={14} />
+            <User size={13} />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-bold truncate" style={{ color: '#f1f5f9', fontSize: 12 }}>
+            <div className="text-xs font-bold truncate text-[var(--text-primary)]">
               {user?.name ?? 'KSP Officer'}
             </div>
-            <div className="text-xs truncate" style={{ color: '#64748b', fontSize: 10 }}>
-              {user?.designation ?? 'Karnataka State Police'}
+            <div className="text-[10px] font-semibold truncate text-[var(--text-dim)] mt-0.5">
+              {user?.designation ?? 'Karnataka Police'}
             </div>
-            {user?.badgeNumber && (
-              <div style={{ fontSize: 9, color: roleColor(), fontFamily: 'monospace', marginTop: 1 }}>
-                {user.badgeNumber}
-              </div>
-            )}
           </div>
-          {/* Logout */}
-          <button
-            onClick={handleLogout}
-            title={t.btn_logout}
-            style={{
-              background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
-              borderRadius: 8, padding: '6px', cursor: 'pointer', color: '#ef4444',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              transition: 'all 0.2s', flexShrink: 0,
-            }}
-            onMouseEnter={e => {
-              (e.currentTarget as HTMLButtonElement).style.background = 'rgba(239,68,68,0.15)';
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLButtonElement).style.background = 'rgba(239,68,68,0.08)';
-            }}
-          >
-            <LogOut size={14} />
-          </button>
         </div>
       </div>
     </aside>

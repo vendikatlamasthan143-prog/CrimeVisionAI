@@ -5,28 +5,19 @@
  */
 
 export function getAnthropicApiKey(): string {
-  if (typeof window === 'undefined') {
-    return process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY || '';
-  }
-  const envKey = process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY || '';
-  const localKey = localStorage.getItem('ksp_anthropic_api_key') || '';
-  return (envKey || localKey).trim();
+  return '';
 }
 
 export function setAnthropicApiKey(key: string): void {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('ksp_anthropic_api_key', key.trim());
-  }
+  // Client-side Anthropic API key storage is disabled for security
 }
 
 export function clearAnthropicApiKey(): void {
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem('ksp_anthropic_api_key');
-  }
+  // Disabled
 }
 
 export function hasAnthropicApiKey(): boolean {
-  return !!getAnthropicApiKey();
+  return false;
 }
 
 export function getGeminiApiKey(): string {
@@ -54,19 +45,18 @@ export function hasGeminiApiKey(): boolean {
   return !!getGeminiApiKey();
 }
 
-export function getActiveProvider(): 'gemini' | 'anthropic' | null {
+export function getActiveProvider(): 'gemini' | 'anthropic' {
   if (hasGeminiApiKey()) return 'gemini';
-  if (hasAnthropicApiKey()) return 'anthropic';
-  return null;
+  return 'anthropic';
 }
 
 export function getActiveApiKey(): string {
   const provider = getActiveProvider();
   if (provider === 'gemini') return getGeminiApiKey();
-  if (provider === 'anthropic') return getAnthropicApiKey();
   return '';
 }
 
 export function hasAnyApiKey(): boolean {
-  return getActiveProvider() !== null;
+  // Since Anthropic uses the secure serverless proxy, we always have a provider available
+  return true;
 }

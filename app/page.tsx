@@ -3,40 +3,39 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
-  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
-  Tooltip, ResponsiveContainer, LineChart, Line,
-  XAxis, YAxis, CartesianGrid, Legend,
+  AreaChart, Area, PieChart, Pie, Cell,
+  Tooltip, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Legend,
 } from 'recharts';
 import {
-  Shield, AlertTriangle, TrendingUp, TrendingDown, Activity,
-  Users, FileText, MapPin, Zap, Eye, Clock, ChevronRight,
-  Radio, Target, BarChart2, Bell, CheckCircle, AlertCircle,
-  CheckSquare, Square, Terminal, Send, PlayCircle, ShieldAlert
+  Shield, AlertTriangle, Activity, Users, FileText, MapPin, Zap, Eye, Clock, ChevronRight,
+  Target, BarChart2, Bell, CheckSquare, Square, Cpu, ShieldAlert
 } from 'lucide-react';
 import {
   SUMMARY_METRICS, MONTHLY_CRIME_TRENDS, CRIME_CATEGORIES,
   DISTRICT_RISK_SCORES, AI_ALERTS, FIR_RECORDS, CRIMINAL_PROFILES,
   COMMISSIONER_RECOMMENDATIONS
 } from '@/lib/mockData';
+import { usePresentation } from '@/components/PresentationContext';
 
 // ── Custom Tooltip ─────────────────────────────────────────────
 function CustomTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
     <div style={{
-      background: 'rgba(5,12,28,0.97)',
-      border: '1px solid rgba(0,240,255,0.22)',
+      background: 'var(--cyber-surface)',
+      border: '1px solid var(--cyber-border)',
       borderRadius: 10,
       padding: '12px 16px',
       fontSize: 13,
-      color: '#f1f5f9',
-      boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+      color: 'var(--text-primary)',
+      boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+      backdropFilter: 'blur(10px)',
     }}>
-      <div style={{ color: '#00f0ff', fontWeight: 700, marginBottom: 6, fontSize: 11, letterSpacing: '0.08em' }}>{label}</div>
+      <div style={{ color: 'var(--cyber-cyan)', fontWeight: 700, marginBottom: 6, fontSize: 11, letterSpacing: '0.08em' }}>{label}</div>
       {payload.map((p: any, i: number) => (
         <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 2 }}>
           <span style={{ color: p.color, fontWeight: 600 }}>{p.name}</span>
-          <span style={{ color: '#f1f5f9', fontWeight: 700 }}>{p.value?.toLocaleString()}</span>
+          <span style={{ color: 'var(--text-secondary)', fontWeight: 700 }}>{p.value?.toLocaleString()}</span>
         </div>
       ))}
     </div>
@@ -47,8 +46,8 @@ function CustomTooltip({ active, payload, label }: any) {
 function alertSeverityColor(severity: string) {
   if (severity === 'critical') return '#ef4444';
   if (severity === 'high') return '#f59e0b';
-  if (severity === 'medium') return '#00f0ff';
-  return '#94a3b8';
+  if (severity === 'medium') return 'var(--cyber-cyan)';
+  return 'var(--text-muted)';
 }
 
 function alertSeverityBadgeClass(severity: string) {
@@ -75,6 +74,7 @@ const RESPONSE_TEAMS = [
 
 // ── Main Page ──────────────────────────────────────────────────
 export default function DashboardPage() {
+  const { isPresentationMode } = usePresentation();
   const [currentTime, setCurrentTime] = useState('');
   const [currentDate, setCurrentDate] = useState('');
   const [mounted, setMounted] = useState(false);
@@ -108,7 +108,7 @@ export default function DashboardPage() {
   function riskBarColor(score: number) {
     if (score > 80) return '#ef4444';
     if (score > 60) return '#f59e0b';
-    return '#00f0ff';
+    return 'var(--cyber-cyan)';
   }
 
   return (
@@ -118,19 +118,21 @@ export default function DashboardPage() {
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <div style={{
-            width: 52, height: 52, borderRadius: 12,
+            width: isPresentationMode ? 60 : 52, height: isPresentationMode ? 60 : 52, borderRadius: 12,
             background: 'rgba(0,240,255,0.1)', border: '1px solid rgba(0,240,255,0.3)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: '0 0 24px rgba(0,240,255,0.15)',
           }}>
-            <Shield size={26} color="#00f0ff" />
+            <Shield size={isPresentationMode ? 30 : 26} className="text-[var(--cyber-cyan)]" />
           </div>
           <div>
             <h1 className="page-title" style={{ letterSpacing: '0.06em' }}>COMMAND DASHBOARD</h1>
             <p className="page-subtitle">Karnataka State Police — Real-Time Intelligence Overview</p>
           </div>
         </div>
-        <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+        
+        {/* Presentation-hidden header widgets */}
+        <div className="presentation-hidden" style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
           <div style={{
             display: 'flex', alignItems: 'center', gap: 8,
             background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)',
@@ -141,150 +143,159 @@ export default function DashboardPage() {
           </div>
           {mounted && (
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 22, fontWeight: 800, color: '#00f0ff', letterSpacing: '0.06em', fontFamily: 'JetBrains Mono, monospace' }}>{currentTime}</div>
-              <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{currentDate}</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--cyber-cyan)', letterSpacing: '0.06em', fontFamily: 'JetBrains Mono, monospace' }}>{currentTime}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{currentDate}</div>
             </div>
           )}
         </div>
       </div>
 
       {/* ── DISTRICT INTELLIGENCE FEED TICKER ──────────────── */}
-      <div className="ticker-bar" style={{ marginBottom: 24, borderRadius: 8, background: 'rgba(0, 240, 255, 0.03)', border: '1px solid rgba(0, 240, 255, 0.1)' }}>
+      <div className="ticker-bar" style={{ marginBottom: 24, borderRadius: 8, background: 'rgba(0, 240, 255, 0.03)', border: '1px solid var(--cyber-border)' }}>
         <div style={{ display: 'flex', alignItems: 'center' }}>
           <div style={{
-            flexShrink: 0, background: 'rgba(0, 240, 255, 0.2)', color: '#00f0ff',
+            flexShrink: 0, background: 'rgba(0, 240, 255, 0.2)', color: 'var(--cyber-cyan)',
             padding: '4px 12px', fontSize: 11, fontWeight: 800, letterSpacing: '0.1em',
-            marginRight: 12, borderRadius: '6px 0 0 6px', borderRight: '1px solid rgba(0, 240, 255, 0.3)'
+            marginRight: 12, borderRadius: '6px 0 0 6px', borderRight: '1px solid var(--cyber-border)'
           }}>
             📡 BULLETIN FEED
           </div>
           <div style={{ overflow: 'hidden', flex: 1 }}>
-            <div className="ticker-content animate-ticker" style={{ fontSize: 13, color: '#94a3b8', fontWeight: 600, whiteSpace: 'nowrap' }}>
-              🔴 CRITICAL: Cybercrime surge in Bengaluru Urban (412 complaints logged)   ·   🟠 HIGH: Suspect vehicle KA-32-CD-5678 flagged on NH-48 in Belagavi corridor   ·   🔴 CRITICAL: Sand mafia operations detected on Tungabhadra riverbanks, Raichur   ·   🟡 MEDIUM: Organized syndicate coordination intercepted in Ballari district   ·   🟢 NORMAL: Security sweep completed at Mangaluru Harbor.
+            <div className="ticker-content animate-ticker" style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 600, whiteSpace: 'nowrap' }}>
+              🔴 CRITICAL: Cybercrime surge in Bengaluru Urban (412 complaints logged)   ·   &nbsp;&nbsp;   ·   &nbsp;&nbsp;   🟠 HIGH: Suspect vehicle KA-32-CD-5678 flagged on NH-48 in Belagavi corridor   ·   &nbsp;&nbsp;   ·   &nbsp;&nbsp;   🔴 CRITICAL: Sand mafia operations detected on Tungabhadra riverbanks, Raichur   ·   &nbsp;&nbsp;   ·   &nbsp;&nbsp;   🟡 MEDIUM: Organized syndicate coordination intercepted in Ballari district   ·   &nbsp;&nbsp;   ·   &nbsp;&nbsp;   🟢 NORMAL: Security sweep completed at Mangaluru Harbor.
             </div>
           </div>
         </div>
       </div>
 
       {/* ── PRIMARY METRIC CARDS ──────────────────────────── */}
-      <div className="responsive-grid-4" style={{ marginBottom: 18 }}>
+      {/* Resized and scaled up as requested */}
+      <div className="responsive-grid-4" style={{ marginBottom: 24, gap: isPresentationMode ? '24px' : '18px' }}>
+        
         {/* Total Crimes */}
-        <div className="glass-card" style={{ padding: 22 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
+        <div className="glass-card" style={{ padding: isPresentationMode ? '34px 28px' : '28px 24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: isPresentationMode ? 220 : 190 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <div style={{
-              width: 42, height: 42, borderRadius: 10,
-              background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)',
+              width: isPresentationMode ? 60 : 52, height: isPresentationMode ? 60 : 52, borderRadius: 12,
+              background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              <BarChart2 size={20} color="#ef4444" />
+              <BarChart2 size={isPresentationMode ? 28 : 24} className="text-[var(--cyber-red)]" />
             </div>
-            <span className="badge badge-red" style={{ fontSize: 10 }}>+12.4%</span>
+            <span className="badge badge-red" style={{ fontSize: 10 }}>+12.4% YoY</span>
           </div>
-          <div className="metric-value neon-red" style={{ fontSize: '2.6rem' }}>
-            {SUMMARY_METRICS.totalCrimes.toLocaleString()}
-          </div>
-          <div className="metric-label" style={{ marginTop: 4 }}>Total Crimes Recorded</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 8 }}>
-            <TrendingUp size={12} color="#ef4444" />
-            <span style={{ fontSize: 12, color: '#94a3b8' }}>YoY increase from 2024</span>
+          <div>
+            <div className="metric-value neon-red" style={{ fontSize: isPresentationMode ? '3.75rem' : '3rem', fontWeight: 900, lineHeight: 1 }}>
+              {SUMMARY_METRICS.totalCrimes.toLocaleString()}
+            </div>
+            <div className="metric-label" style={{ marginTop: 8, fontSize: isPresentationMode ? 14 : 12, fontWeight: 800 }}>Total Crimes</div>
+            <div className="text-xs text-[var(--text-muted)]" style={{ marginTop: 4, lineHeight: 1.4 }}>
+              Total crimes logged in the Karnataka State Police repository.
+            </div>
           </div>
         </div>
 
-        {/* Active Cases */}
-        <div className="glass-card" style={{ padding: 22 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
+        {/* Active Investigations */}
+        <div className="glass-card" style={{ padding: isPresentationMode ? '34px 28px' : '28px 24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: isPresentationMode ? 220 : 190 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <div style={{
-              width: 42, height: 42, borderRadius: 10,
-              background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)',
+              width: isPresentationMode ? 60 : 52, height: isPresentationMode ? 60 : 52, borderRadius: 12,
+              background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              <Activity size={20} color="#f59e0b" />
+              <Activity size={isPresentationMode ? 28 : 24} className="text-[var(--cyber-amber)]" />
             </div>
             <span className="badge badge-amber" style={{ fontSize: 10 }}>ACTIVE</span>
           </div>
-          <div className="metric-value neon-amber" style={{ fontSize: '2.6rem' }}>
-            {SUMMARY_METRICS.activeCases.toLocaleString()}
-          </div>
-          <div className="metric-label" style={{ marginTop: 4 }}>Active Investigations</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 8 }}>
-            <Clock size={12} color="#f59e0b" />
-            <span style={{ fontSize: 12, color: '#94a3b8' }}>Across 31 districts</span>
+          <div>
+            <div className="metric-value neon-amber" style={{ fontSize: isPresentationMode ? '3.75rem' : '3rem', fontWeight: 900, lineHeight: 1 }}>
+              {SUMMARY_METRICS.activeCases.toLocaleString()}
+            </div>
+            <div className="metric-label" style={{ marginTop: 8, fontSize: isPresentationMode ? 14 : 12, fontWeight: 800 }}>Active Investigations</div>
+            <div className="text-xs text-[var(--text-muted)]" style={{ marginTop: 4, lineHeight: 1.4 }}>
+              Cases currently being investigated by district panels.
+            </div>
           </div>
         </div>
 
-        {/* Clearance Rate */}
-        <div className="glass-card" style={{ padding: 22 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
+        {/* Threat Level */}
+        <div className="glass-card" style={{ padding: isPresentationMode ? '34px 28px' : '28px 24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: isPresentationMode ? 220 : 190 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <div style={{
-              width: 42, height: 42, borderRadius: 10,
-              background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)',
+              width: isPresentationMode ? 60 : 52, height: isPresentationMode ? 60 : 52, borderRadius: 12,
+              background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              <CheckCircle size={20} color="#10b981" />
+              <ShieldAlert size={isPresentationMode ? 28 : 24} className="text-[var(--cyber-red)]" />
             </div>
-            <span className="badge badge-green" style={{ fontSize: 10 }}>HIGH EFFICIENCY</span>
+            <span className="badge badge-red animate-pulse" style={{ fontSize: 10 }}>ALERT</span>
           </div>
-          <div className="metric-value neon-green" style={{ fontSize: '2.6rem' }}>
-            {SUMMARY_METRICS.clearanceRate}%
-          </div>
-          <div className="metric-label" style={{ marginTop: 4 }}>Clearance Rate</div>
-          <div style={{ marginTop: 8 }}>
-            <div className="risk-bar-track">
-              <div className="risk-bar-fill" style={{ width: `${SUMMARY_METRICS.clearanceRate}%`, background: '#10b981' }} />
+          <div>
+            <div className="metric-value neon-red" style={{ fontSize: isPresentationMode ? '3.75rem' : '3rem', fontWeight: 900, lineHeight: 1 }}>
+              HIGH
+            </div>
+            <div className="metric-label" style={{ marginTop: 8, fontSize: isPresentationMode ? 14 : 12, fontWeight: 800 }}>Threat Level</div>
+            <div className="text-xs text-[var(--text-muted)]" style={{ marginTop: 4, lineHeight: 1.4 }}>
+              Calculated real-time statewide intelligence security rating.
             </div>
           </div>
         </div>
 
-        {/* AI Alerts */}
-        <div className="glass-card" style={{ padding: 22, border: '1px solid rgba(0,240,255,0.22)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
+        {/* Prediction Accuracy */}
+        <div className="glass-card" style={{ padding: isPresentationMode ? '34px 28px' : '28px 24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: isPresentationMode ? 220 : 190 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <div style={{
-              width: 42, height: 42, borderRadius: 10,
-              background: 'rgba(0,240,255,0.1)', border: '1px solid rgba(0,240,255,0.3)',
+              width: isPresentationMode ? 60 : 52, height: isPresentationMode ? 60 : 52, borderRadius: 12,
+              background: 'rgba(0,240,255,0.1)', border: '1px solid rgba(0,240,255,0.25)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }} className="animate-pulse-glow">
-              <Zap size={20} color="#00f0ff" />
+            }}>
+              <Target size={isPresentationMode ? 28 : 24} className="text-[var(--cyber-cyan)]" />
             </div>
-            <div className="status-dot" style={{ marginTop: 6 }} />
+            <span className="badge badge-cyan" style={{ fontSize: 10 }}>94.7% CALIBRATED</span>
           </div>
-          <div className="metric-value neon-cyan" style={{ fontSize: '2.6rem' }}>
-            {SUMMARY_METRICS.aiAlertsToday}
-          </div>
-          <div className="metric-label" style={{ marginTop: 4 }}>AI Alerts Today</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 8 }}>
-            <Radio size={12} color="#00f0ff" />
-            <span style={{ fontSize: 12, color: '#94a3b8' }}>Real-time monitoring active</span>
+          <div>
+            <div className="metric-value neon-cyan" style={{ fontSize: isPresentationMode ? '3.75rem' : '3rem', fontWeight: 900, lineHeight: 1 }}>
+              94.7%
+            </div>
+            <div className="metric-label" style={{ marginTop: 8, fontSize: isPresentationMode ? 14 : 12, fontWeight: 800 }}>Prediction Accuracy</div>
+            <div className="text-xs text-[var(--text-muted)]" style={{ marginTop: 4, lineHeight: 1.4 }}>
+              Confidence rating of current predictive machine models.
+            </div>
           </div>
         </div>
       </div>
 
-      {/* ── SECONDARY METRICS ────────────────────────────── */}
-      <div className="responsive-grid-4" style={{ marginBottom: 24 }}>
-        {[
-          { label: 'Arrests MTD', value: SUMMARY_METRICS.arrestsThisMonth.toLocaleString(), icon: <Users size={16} color="#8b5cf6" />, color: '#8b5cf6' },
-          { label: 'Charges Filed', value: SUMMARY_METRICS.chargesFiledMTD.toLocaleString(), icon: <FileText size={16} color="#0ea5e9" />, color: '#0ea5e9' },
-          { label: 'High Risk Districts', value: SUMMARY_METRICS.highRiskDistricts.toString(), icon: <AlertTriangle size={16} color="#ef4444" />, color: '#ef4444' },
-          { label: 'Solved Cases', value: SUMMARY_METRICS.solvedCases.toLocaleString(), icon: <Target size={16} color="#10b981" />, color: '#10b981' },
-        ].map((m) => (
-          <div key={m.label} className="glass-card" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div style={{
-              width: 36, height: 36, borderRadius: 8,
-              background: `rgba(${m.color === '#8b5cf6' ? '139,92,246' : m.color === '#0ea5e9' ? '14,165,233' : m.color === '#ef4444' ? '239,68,68' : '16,185,129'},0.12)`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-            }}>
-              {m.icon}
+      {/* ── SECONDARY METRICS (Hidden in Presentation Mode) ────────────── */}
+      {!isPresentationMode && (
+        <div className="responsive-grid-4 animate-fadeInUp" style={{ marginBottom: 24 }}>
+          {[
+            { label: 'Arrests MTD', value: SUMMARY_METRICS.arrestsThisMonth.toLocaleString(), icon: <Users size={16} color="#8b5cf6" />, color: 'var(--cyber-purple)' },
+            { label: 'Charges Filed', value: SUMMARY_METRICS.chargesFiledMTD.toLocaleString(), icon: <FileText size={16} color="#0ea5e9" />, color: 'var(--cyber-blue)' },
+            { label: 'High Risk Districts', value: SUMMARY_METRICS.highRiskDistricts.toString(), icon: <AlertTriangle size={16} color="#ef4444" />, color: 'var(--cyber-red)' },
+            { label: 'Solved Cases', value: SUMMARY_METRICS.solvedCases.toLocaleString(), icon: <Target size={16} color="#10b981" />, color: 'var(--cyber-green)' },
+          ].map((m) => (
+            <div key={m.label} className="glass-card" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+              <div style={{
+                width: 36, height: 36, borderRadius: 8,
+                background: 'rgba(0, 240, 255, 0.05)',
+                border: '1px solid var(--cyber-border)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}>
+                {m.icon}
+              </div>
+              <div>
+                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: m.color, lineHeight: 1 }}>{m.value}</div>
+                <div className="metric-label" style={{ fontSize: 11, marginTop: 3 }}>{m.label}</div>
+              </div>
             </div>
-            <div>
-              <div style={{ fontSize: '1.4rem', fontWeight: 800, color: m.color, lineHeight: 1 }}>{m.value}</div>
-              <div className="metric-label" style={{ fontSize: 11, marginTop: 3 }}>{m.label}</div>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* ── MAIN CHARTS ROW ──────────────────────────────── */}
-      <div className="responsive-grid-2-1" style={{ marginBottom: 24 }}>
-        {/* Area Chart */}
+      <div className={isPresentationMode ? 'responsive-grid-1' : 'responsive-grid-2-1'} style={{ marginBottom: 24 }}>
+        
+        {/* Area Chart - Expanded in Presentation Mode */}
         <div className="glass-card" style={{ padding: 24 }}>
           <div className="section-header">
             <div className="section-header-line" />
@@ -293,7 +304,7 @@ export default function DashboardPage() {
               <span className="badge badge-cyan" style={{ fontSize: 10 }}>LIVE DATA</span>
             </div>
           </div>
-          <ResponsiveContainer width="100%" height={320}>
+          <ResponsiveContainer width="100%" height={isPresentationMode ? 420 : 320}>
             <AreaChart data={MONTHLY_CRIME_TRENDS} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
               <defs>
                 <linearGradient id="gcyber" x1="0" y1="0" x2="0" y2="1">
@@ -313,11 +324,11 @@ export default function DashboardPage() {
                   <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-              <XAxis dataKey="month" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} interval={1} />
-              <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--cyber-border)" />
+              <XAxis dataKey="month" tick={{ fill: 'var(--text-muted)', fontSize: isPresentationMode ? 13 : 11 }} axisLine={false} tickLine={false} interval={1} />
+              <YAxis tick={{ fill: 'var(--text-muted)', fontSize: isPresentationMode ? 13 : 11 }} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomTooltip />} />
-              <Legend wrapperStyle={{ color: '#94a3b8', fontSize: 12 }} />
+              <Legend wrapperStyle={{ color: 'var(--text-muted)', fontSize: isPresentationMode ? 14 : 12 }} />
               <Area type="monotone" dataKey="cybercrime" name="Cybercrime" stroke="#00f0ff" strokeWidth={2} fill="url(#gcyber)" fillOpacity={1} dot={false} />
               <Area type="monotone" dataKey="violence" name="Violence" stroke="#ef4444" strokeWidth={2} fill="url(#gviolence)" fillOpacity={1} dot={false} />
               <Area type="monotone" dataKey="narcotics" name="Narcotics" stroke="#e879f9" strokeWidth={2} fill="url(#gnarcotics)" fillOpacity={1} dot={false} />
@@ -326,49 +337,52 @@ export default function DashboardPage() {
           </ResponsiveContainer>
         </div>
 
-        {/* Pie Chart */}
-        <div className="glass-card" style={{ padding: 24 }}>
-          <div className="section-header">
-            <div className="section-header-line" />
-            <span className="section-title">Crime Distribution</span>
-          </div>
-          <ResponsiveContainer width="100%" height={200}>
-            <PieChart>
-              <Pie
-                data={CRIME_CATEGORIES}
-                dataKey="count"
-                nameKey="name"
-                cx="50%" cy="50%"
-                innerRadius={60} outerRadius={90}
-                paddingAngle={3}
-              >
-                {CRIME_CATEGORIES.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} stroke="rgba(0,0,0,0.3)" strokeWidth={1} />
-                ))}
-              </Pie>
-              <Tooltip content={<CustomTooltip />} />
-            </PieChart>
-          </ResponsiveContainer>
-          {/* Custom Legend */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginTop: 8 }}>
-            {CRIME_CATEGORIES.map((cat) => (
-              <div key={cat.name} style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: cat.color, flexShrink: 0, boxShadow: `0 0 6px ${cat.color}` }} />
-                  <span style={{ fontSize: 12, color: '#cbd5e1' }}>{cat.name}</span>
+        {/* Pie Chart - Hidden in Presentation Mode to simplify view */}
+        {!isPresentationMode && (
+          <div className="glass-card animate-fadeInUp" style={{ padding: 24 }}>
+            <div className="section-header">
+              <div className="section-header-line" />
+              <span className="section-title">Crime Distribution</span>
+            </div>
+            <ResponsiveContainer width="100%" height={200}>
+              <PieChart>
+                <Pie
+                  data={CRIME_CATEGORIES}
+                  dataKey="count"
+                  nameKey="name"
+                  cx="50%" cy="50%"
+                  innerRadius={60} outerRadius={90}
+                  paddingAngle={3}
+                >
+                  {CRIME_CATEGORIES.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} stroke="rgba(0,0,0,0.3)" strokeWidth={1} />
+                  ))}
+                </Pie>
+                <Tooltip content={<CustomTooltip />} />
+              </PieChart>
+            </ResponsiveContainer>
+            {/* Custom Legend */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginTop: 8 }}>
+              {CRIME_CATEGORIES.map((cat) => (
+                <div key={cat.name} style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: cat.color, flexShrink: 0, boxShadow: `0 0 6px ${cat.color}` }} />
+                    <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{cat.name}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: cat.color }}>{cat.count.toLocaleString()}</span>
+                    <span style={{ fontSize: 10, color: cat.trend?.startsWith('+') ? '#ef4444' : '#10b981', fontWeight: 600 }}>{cat.trend}</span>
+                  </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: cat.color }}>{cat.count.toLocaleString()}</span>
-                  <span style={{ fontSize: 10, color: cat.trend?.startsWith('+') ? '#ef4444' : '#10b981', fontWeight: 600 }}>{cat.trend}</span>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* ── OPERATIONAL ROW (Recent FIRs & Top Wanted Criminals) ── */}
-      <div className="responsive-grid-3-2" style={{ marginBottom: 24 }}>
+      <div className={isPresentationMode ? 'responsive-grid-1' : 'responsive-grid-3-2'} style={{ marginBottom: 24 }}>
+        
         {/* Recent FIRs Table */}
         <div className="glass-card" style={{ padding: 24 }}>
           <div className="section-header">
@@ -384,7 +398,7 @@ export default function DashboardPage() {
               <thead>
                 <tr>
                   <th>FIR Number</th>
-                  <th>Date</th>
+                  <th className="presentation-hidden">Date</th>
                   <th>Category</th>
                   <th>District</th>
                   <th>Suspect</th>
@@ -392,23 +406,23 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {FIR_RECORDS.slice(0, 7).map((fir) => (
+                {FIR_RECORDS.slice(0, isPresentationMode ? 5 : 7).map((fir) => (
                   <tr key={fir.id}>
-                    <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13 }}>
-                      <Link href={`/fir?id=${fir.id}`} className="text-[#00f0ff] hover:underline font-bold">
+                    <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: isPresentationMode ? 15 : 13 }}>
+                      <Link href={`/fir?id=${fir.id}`} className="text-[var(--cyber-cyan)] hover:underline font-bold">
                         {fir.firNumber}
                       </Link>
                     </td>
-                    <td style={{ color: '#cbd5e1', fontSize: 13 }}>{fir.date}</td>
-                    <td style={{ color: '#f1f5f9', fontWeight: 600, fontSize: 13 }}>{fir.crimeCategory}</td>
-                    <td style={{ color: '#cbd5e1', fontSize: 13 }}>
+                    <td className="presentation-hidden" style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{fir.date}</td>
+                    <td style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: isPresentationMode ? 15 : 13 }}>{fir.crimeCategory}</td>
+                    <td style={{ color: 'var(--text-secondary)', fontSize: isPresentationMode ? 15 : 13 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <MapPin size={12} color="#64748b" />
+                        <MapPin size={12} className="text-[var(--text-dim)]" />
                         {fir.district}
                       </div>
                     </td>
-                    <td style={{ color: '#cbd5e1', fontSize: 13 }}>
-                      <Link href={`/search?query=${fir.suspectDetails.name}`} className="hover:text-[#00f0ff] hover:underline transition-colors font-semibold">
+                    <td style={{ color: 'var(--text-secondary)', fontSize: isPresentationMode ? 15 : 13 }}>
+                      <Link href={`/search?query=${fir.suspectDetails.name}`} className="hover:text-[var(--cyber-cyan)] hover:underline transition-colors font-semibold">
                         {fir.suspectDetails.name}
                       </Link>
                     </td>
@@ -424,224 +438,230 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Top Wanted Criminals */}
-        <div className="glass-card" style={{ padding: 24 }}>
-          <div className="section-header">
-            <div className="section-header-line" />
-            <span className="section-title">Top Wanted Criminals</span>
-            <div style={{ marginLeft: 'auto' }}>
-              <span className="badge badge-red font-black" style={{ fontSize: 10 }}>CRITICAL STATUS</span>
-            </div>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 380, overflowY: 'auto' }}>
-            {CRIMINAL_PROFILES.filter(c => c.riskLevel === 'Critical').slice(0, 5).map((c) => (
-              <div key={c.id} style={{
-                padding: '12px 14px', borderRadius: 10,
-                background: 'rgba(239, 68, 68, 0.04)', border: '1px solid rgba(239, 68, 68, 0.15)',
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              }}>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Link href={`/search?query=${c.name}`} className="font-bold text-slate-100 hover:text-[#00f0ff] hover:underline text-[15px]">
-                      {c.name}
-                    </Link>
-                    <span className="badge badge-red" style={{ fontSize: 9, padding: '1px 6px' }}>WANTED</span>
-                  </div>
-                  <div style={{ fontSize: 13, color: '#cbd5e1', marginTop: 4 }}>
-                    Age: {c.age} · {c.district}
-                  </div>
-                  <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
-                    Last seen: {c.recentActivity}
-                  </div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div className="neon-red" style={{ fontSize: 18, fontWeight: 800 }}>{c.profileScore}</div>
-                  <div className="metric-label" style={{ fontSize: 9 }}>Risk Score</div>
-                </div>
+        {/* Top Wanted Criminals - Hidden in Presentation Mode to keep dashboard clean */}
+        {!isPresentationMode && (
+          <div className="glass-card animate-fadeInUp" style={{ padding: 24 }}>
+            <div className="section-header">
+              <div className="section-header-line" />
+              <span className="section-title">Top Wanted Criminals</span>
+              <div style={{ marginLeft: 'auto' }}>
+                <span className="badge badge-red font-black" style={{ fontSize: 10 }}>CRITICAL STATUS</span>
               </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* ── TACTICAL & INSIGHTS ROW (Recommendations, Operations, Risk index) ── */}
-      <div className="responsive-grid-3" style={{ marginBottom: 24 }}>
-        
-        {/* AI Recommendations Checklist */}
-        <div className="glass-card" style={{ padding: 24 }}>
-          <div className="section-header">
-            <div className="section-header-line" />
-            <span className="section-title">AI Directives Checklist</span>
-            <div style={{ marginLeft: 'auto' }}>
-              <span className="badge badge-cyan" style={{ fontSize: 10 }}>ACTIONABLE</span>
             </div>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxHeight: 330, overflowY: 'auto' }}>
-            {COMMISSIONER_RECOMMENDATIONS.map((rec) => {
-              const isCompleted = completedRecommendations.has(rec.id);
-              return (
-                <div 
-                  key={rec.id} 
-                  onClick={() => toggleRecommendation(rec.id)}
-                  style={{
-                    padding: '12px 14px', borderRadius: 10, cursor: 'pointer',
-                    background: isCompleted ? 'rgba(16,185,129,0.04)' : 'rgba(0,240,255,0.02)',
-                    border: `1px solid ${isCompleted ? 'rgba(16,185,129,0.25)' : 'rgba(0,240,255,0.12)'}`,
-                    transition: 'all 0.2s ease',
-                    display: 'flex', gap: 12, alignItems: 'flex-start',
-                  }}
-                >
-                  <div style={{ marginTop: 2, flexShrink: 0 }}>
-                    {isCompleted ? (
-                      <CheckSquare size={18} color="#10b981" />
-                    ) : (
-                      <Square size={18} color="#00f0ff" />
-                    )}
-                  </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 380, overflowY: 'auto' }}>
+              {CRIMINAL_PROFILES.filter(c => c.riskLevel === 'Critical').slice(0, 5).map((c) => (
+                <div key={c.id} style={{
+                  padding: '12px 14px', borderRadius: 10,
+                  background: 'rgba(239, 68, 68, 0.04)', border: '1px solid rgba(239, 68, 68, 0.15)',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                }}>
                   <div>
-                    <div style={{
-                      fontSize: 14, fontWeight: 700, 
-                      color: isCompleted ? '#cbd5e1' : '#f1f5f9',
-                      textDecoration: isCompleted ? 'line-through' : 'none',
-                    }}>
-                      {rec.action}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Link href={`/search?query=${c.name}`} className="font-bold text-[var(--text-primary)] hover:text-[var(--cyber-cyan)] hover:underline text-[15px]">
+                        {c.name}
+                      </Link>
+                      <span className="badge badge-red" style={{ fontSize: 9, padding: '1px 6px' }}>WANTED</span>
                     </div>
-                    <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4, lineHeight: 1.4 }}>
-                      {rec.rationale}
+                    <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4 }}>
+                      Age: {c.age} · {c.district}
                     </div>
-                    <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
-                      <span className={isCompleted ? 'badge badge-green' : 'badge badge-red'} style={{ fontSize: 8, padding: '1px 5px' }}>
-                        {rec.urgency}
-                      </span>
-                      <span className="badge badge-gray" style={{ fontSize: 8, padding: '1px 5px' }}>
-                        PRIORITY {rec.priority}
-                      </span>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                      Last seen: {c.recentActivity}
                     </div>
                   </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div className="neon-red" style={{ fontSize: 18, fontWeight: 800 }}>{c.profileScore}</div>
+                    <div className="metric-label" style={{ fontSize: 9 }}>Risk Score</div>
+                  </div>
                 </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Active Operations Monitor */}
-        <div className="glass-card" style={{ padding: 24 }}>
-          <div className="section-header">
-            <div className="section-header-line" />
-            <span className="section-title">Active Operations</span>
-            <div style={{ marginLeft: 'auto' }}>
-              <span className="badge badge-amber animate-pulse" style={{ fontSize: 10 }}>MONITORING</span>
+              ))}
             </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 330, overflowY: 'auto' }}>
-            {RESPONSE_TEAMS.map((team, idx) => (
-              <div key={idx} style={{
-                padding: '12px 14px', borderRadius: 10,
-                background: 'rgba(10,22,40,0.5)', border: '1px solid rgba(255,255,255,0.06)',
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9' }}>{team.name}</span>
-                  <span style={{
-                    fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 12,
-                    background: `${team.statusColor}20`, color: team.statusColor,
-                    border: `1px solid ${team.statusColor}40`,
-                  }}>
-                    {team.status}
-                  </span>
-                </div>
-                <div style={{ display: 'flex', gap: 12, fontSize: 12, color: '#94a3b8', marginTop: 6 }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <MapPin size={10} color="#00f0ff" /> {team.district}
-                  </span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <Users size={10} color="#8b5cf6" /> {team.members} Officers
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        )}
+      </div>
 
-        {/* District Risk Index */}
-        <div className="glass-card" style={{ padding: 24 }}>
-          <div className="section-header">
-            <div className="section-header-line" />
-            <span className="section-title">District Risk Index</span>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 330, overflowY: 'auto' }}>
-            {DISTRICT_RISK_SCORES.map((d) => (
-              <div key={d.name}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <MapPin size={11} color={riskBarColor(d.score)} />
-                    <span style={{ fontSize: 13, color: '#cbd5e1', fontWeight: 600 }}>{d.name}</span>
+      {/* ── TACTICAL & INSIGHTS ROW (Hidden in Presentation Mode) ── */}
+      {!isPresentationMode && (
+        <div className="responsive-grid-3 animate-fadeInUp" style={{ marginBottom: 24 }}>
+          
+          {/* AI Recommendations Checklist */}
+          <div className="glass-card" style={{ padding: 24 }}>
+            <div className="section-header">
+              <div className="section-header-line" />
+              <span className="section-title">AI Directives Checklist</span>
+              <div style={{ marginLeft: 'auto' }}>
+                <span className="badge badge-cyan" style={{ fontSize: 10 }}>ACTIONABLE</span>
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxHeight: 330, overflowY: 'auto' }}>
+              {COMMISSIONER_RECOMMENDATIONS.map((rec) => {
+                const isCompleted = completedRecommendations.has(rec.id);
+                return (
+                  <div 
+                    key={rec.id} 
+                    onClick={() => toggleRecommendation(rec.id)}
+                    style={{
+                      padding: '12px 14px', borderRadius: 10, cursor: 'pointer',
+                      background: isCompleted ? 'rgba(16,185,129,0.04)' : 'rgba(0,240,255,0.02)',
+                      border: `1px solid ${isCompleted ? 'rgba(16,185,129,0.25)' : 'var(--cyber-border)'}`,
+                      transition: 'all 0.2s ease',
+                      display: 'flex', gap: 12, alignItems: 'flex-start',
+                    }}
+                  >
+                    <div style={{ marginTop: 2, flexShrink: 0 }}>
+                      {isCompleted ? (
+                        <CheckSquare size={18} className="text-[var(--cyber-green)]" />
+                      ) : (
+                        <Square size={18} className="text-[var(--cyber-cyan)]" />
+                      )}
+                    </div>
+                    <div>
+                      <div style={{
+                        fontSize: 14, fontWeight: 700, 
+                        color: isCompleted ? 'var(--text-muted)' : 'var(--text-primary)',
+                        textDecoration: isCompleted ? 'line-through' : 'none',
+                      }}>
+                        {rec.action}
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.4 }}>
+                        {rec.rationale}
+                      </div>
+                      <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                        <span className={isCompleted ? 'badge badge-green' : 'badge badge-red'} style={{ fontSize: 8, padding: '1px 5px' }}>
+                          {rec.urgency}
+                        </span>
+                        <span className="badge badge-gray" style={{ fontSize: 8, padding: '1px 5px' }}>
+                          PRIORITY {rec.priority}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontSize: 13, fontWeight: 800, color: riskBarColor(d.score) }}>{d.score}</span>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Active Operations Monitor */}
+          <div className="glass-card" style={{ padding: 24 }}>
+            <div className="section-header">
+              <div className="section-header-line" />
+              <span className="section-title">Active Operations</span>
+              <div style={{ marginLeft: 'auto' }}>
+                <span className="badge badge-amber animate-pulse" style={{ fontSize: 10 }}>MONITORING</span>
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 330, overflowY: 'auto' }}>
+              {RESPONSE_TEAMS.map((team, idx) => (
+                <div key={idx} style={{
+                  padding: '12px 14px', borderRadius: 10,
+                  background: 'var(--cyber-surface)', border: '1px solid var(--cyber-border)',
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{team.name}</span>
                     <span style={{
-                      fontSize: 9, fontWeight: 700,
-                      color: '#ef4444',
-                      background: 'rgba(239,68,68,0.1)',
-                      border: '1px solid rgba(239,68,68,0.25)',
-                      borderRadius: 10, padding: '1px 5px',
-                    }}>{d.predictedIncrease}</span>
+                      fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 12,
+                      background: `${team.statusColor}20`, color: team.statusColor,
+                      border: `1px solid ${team.statusColor}40`,
+                    }}>
+                      {team.status}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 12, fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <MapPin size={10} className="text-[var(--cyber-cyan)]" /> {team.district}
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <Users size={10} className="text-[var(--cyber-purple)]" /> {team.members} Officers
+                    </span>
                   </div>
                 </div>
-                <div className="risk-bar-track">
-                  <div className="risk-bar-fill" style={{
-                    width: `${d.score}%`,
-                    background: `linear-gradient(90deg, ${riskBarColor(d.score)}, ${riskBarColor(d.score)}88)`,
-                    boxShadow: `0 0 8px ${riskBarColor(d.score)}66`,
-                  }} />
+              ))}
+            </div>
+          </div>
+
+          {/* District Risk Index */}
+          <div className="glass-card" style={{ padding: 24 }}>
+            <div className="section-header">
+              <div className="section-header-line" />
+              <span className="section-title">District Risk Index</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 330, overflowY: 'auto' }}>
+              {DISTRICT_RISK_SCORES.map((d) => (
+                <div key={d.name}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <MapPin size={11} className="text-[var(--text-dim)]" />
+                      <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 600 }}>{d.name}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 13, fontWeight: 800, color: riskBarColor(d.score) }}>{d.score}</span>
+                      <span style={{
+                        fontSize: 9, fontWeight: 700,
+                        color: 'var(--cyber-red)',
+                        background: 'rgba(239,68,68,0.1)',
+                        border: '1px solid rgba(239,68,68,0.25)',
+                        borderRadius: 10, padding: '1px 5px',
+                      }}>{d.predictedIncrease}</span>
+                    </div>
+                  </div>
+                  <div className="risk-bar-track">
+                    <div className="risk-bar-fill" style={{
+                      width: `${d.score}%`,
+                      background: `linear-gradient(90deg, ${riskBarColor(d.score)}, ${riskBarColor(d.score)}88)`,
+                      boxShadow: `0 0 8px ${riskBarColor(d.score)}66`,
+                    }} />
+                  </div>
                 </div>
-              </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── AI ALERT STRIP (Hidden in Presentation Mode) ────────────────── */}
+      {!isPresentationMode && (
+        <div style={{ marginBottom: 8 }} className="animate-fadeInUp">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+            <div className="section-header-line" />
+            <span className="section-title">
+              <Bell size={16} style={{ display: 'inline', marginRight: 6, verticalAlign: 'middle' }} className="text-[var(--cyber-amber)]" />
+              AI Intelligence Alerts
+            </span>
+            <span className="badge badge-amber" style={{ fontSize: 10 }}>{AI_ALERTS.length} ACTIVE</span>
+            <div style={{ marginLeft: 'auto' }}>
+              <Link href="/alerts" className="text-[var(--cyber-cyan)] hover:underline flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider">
+                Alert Command Center <ChevronRight size={12} />
+              </Link>
+            </div>
+          </div>
+          <div className="responsive-grid-3">
+            {AI_ALERTS.slice(0, 3).map((alert) => (
+              <Link
+                key={alert.id}
+                href="/alerts"
+                className="alert-card glass-card block cursor-pointer"
+                style={{
+                  padding: '14px 18px',
+                  borderLeft: `3px solid ${alertSeverityColor(alert.severity)}`,
+                  borderRadius: '0 12px 12px 0',
+                  textDecoration: 'none',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+                  <span className={alertSeverityBadgeClass(alert.severity)} style={{ fontSize: 10 }}>{alert.severity}</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'JetBrains Mono, monospace' }}>{alert.timestamp}</span>
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.4, marginBottom: 4 }}>{alert.title}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>{alert.description.substring(0, 100)}…</div>
+                <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Eye size={11} className="text-[var(--cyber-cyan)]" />
+                  <span style={{ fontSize: 11, color: 'var(--cyber-cyan)', fontWeight: 600 }}>Confidence: {alert.confidence}%</span>
+                </div>
+              </Link>
             ))}
           </div>
         </div>
-      </div>
-
-      {/* ── AI ALERT STRIP ───────────────────────────────── */}
-      <div style={{ marginBottom: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-          <div className="section-header-line" />
-          <span className="section-title">
-            <Bell size={16} style={{ display: 'inline', marginRight: 6, verticalAlign: 'middle' }} color="#f59e0b" />
-            AI Intelligence Alerts
-          </span>
-          <span className="badge badge-amber" style={{ fontSize: 10 }}>{AI_ALERTS.length} ACTIVE</span>
-          <div style={{ marginLeft: 'auto' }}>
-            <Link href="/alerts" className="text-[#00f0ff] hover:underline flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider">
-              Alert Command Center <ChevronRight size={12} />
-            </Link>
-          </div>
-        </div>
-        <div className="responsive-grid-3">
-          {AI_ALERTS.slice(0, 3).map((alert) => (
-            <Link
-              key={alert.id}
-              href="/alerts"
-              className="alert-card glass-card block cursor-pointer"
-              style={{
-                padding: '14px 18px',
-                borderLeft: `3px solid ${alertSeverityColor(alert.severity)}`,
-                borderRadius: '0 12px 12px 0',
-                textDecoration: 'none',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
-                <span className={alertSeverityBadgeClass(alert.severity)} style={{ fontSize: 10 }}>{alert.severity}</span>
-                <span style={{ fontSize: 11, color: '#64748b', fontFamily: 'JetBrains Mono, monospace' }}>{alert.timestamp}</span>
-              </div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#f1f5f9', lineHeight: 1.4, marginBottom: 4 }}>{alert.title}</div>
-              <div style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.5 }}>{alert.description.substring(0, 100)}…</div>
-              <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Eye size={11} color="#00f0ff" />
-                <span style={{ fontSize: 11, color: '#00f0ff', fontWeight: 600 }}>Confidence: {alert.confidence}%</span>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
+      )}
 
     </div>
   );
